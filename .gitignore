@@ -1,0 +1,43 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution & Packaging
+*.egg-info/
+*.zip
+*.tar.gz
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+wechat_keys.json
+
+# Databases & Runtime State
+*.db
+*.sqlite3
+campus_agent.db
+server.pid
+server.log
+*.log
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor & Agent Caches
+.vscode/
+.idea/
+.agents/
+scratch/

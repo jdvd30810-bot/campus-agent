@@ -1,0 +1,75 @@
+{
+  "interval_minutes": 30,
+  "last_inspected_at": "2026-10-17 16:21:34",
+  "groups": [
+    {
+      "name": "26秋 通用英语C",
+      "enabled": true,
+      "category": "course",
+      "trusted_speakers": [
+        "谢雨岑",
+        "谢老师",
+        "学委"
+      ]
+    },
+    {
+      "name": "水心3-3群",
+      "enabled": true,
+      "category": "admin",
+      "trusted_speakers": [
+        "宿管",
+        "辅导员",
+        "楼长"
+      ]
+    },
+    {
+      "name": "26计算机本8",
+      "enabled": true,
+      "category": "admin",
+      "trusted_speakers": [
+        "辅导员",
+        "班长",
+        "团支书"
+      ]
+    },
+    {
+      "name": "26计算机类本8通知群",
+      "enabled": true,
+      "category": "admin",
+      "trusted_speakers": [
+        "教学秘书",
+        "辅导员",
+        "教务处"
+      ]
+    },
+    {
+      "name": "德法26计算机7-8班",
+      "enabled": true,
+      "category": "course",
+      "trusted_speakers": [
+        "老师",
+        "助教",
+        "学委"
+      ]
+    },
+    {
+      "name": "26秋线性代数26计本678",
+      "enabled": true,
+      "category": "course",
+      "trusted_speakers": [
+        "任课老师",
+        "助教"
+      ]
+    },
+    {
+      "name": "26秋形策计算机本678",
+      "enabled": true,
+      "category": "course",
+      "trusted_speakers": [
+        "主讲教师",
+        "课代表"
+      ]
+    }
+  ],
+  "daemon_enabled": true
+}

@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus-Agent · 奶蛙 (NaiWa) 智能学伴工作台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/static/js/three.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            muse: {
+              bg: '#0A0D14',
+              surface: '#111726',
+              card: '#161F33',
+              border: 'rgba(255, 255, 255, 0.08)',
+              borderFocus: 'rgba(99, 102, 241, 0.5)',
+              accent: '#6366F1',
+              emerald: '#10B981',
+              amber: '#F59E0B',
+              rose: '#F43F5E'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* ===== Meta Muse 高阶设计语言与动效引擎 ===== */
+    :root {
+      --meme-sky-blue: #8FD3F4;
+      --meme-yellow: #D9E868;
+      --meme-dark-green: #365322;
+      --naiwa-green-eye: #4EB852;
+    }
+
+    body {
+      background-color: #0A0D14;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+        radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
+        radial-gradient(circle at 15% 50%, rgba(245, 158, 11, 0.04) 0%, transparent 40%);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: #E2E8F0;
+      min-height: 100vh;
+    }
+
+    /* 苹果级磨砂玻璃质感 */
+    .muse-glass {
+      background: rgba(17, 24, 39, 0.72);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .muse-glass-subtle {
+      background: rgba(22, 31, 51, 0.55);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .muse-card {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .muse-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-1px);
+    }
+
+    /* 黄绿粗描边字幕条 - 已遵从指示彻底移除口头禅与横幅，保持零杂音纯净视觉 */
+    .bili-subtitle-dash {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* 奶蛙动态贴纸白色虚线 (Marching Ants) - 已遵从指示彻底移除白虚线，保持零杂音纯净视觉 */
+    .marching-ants-path-dash {
+      display: none !important;
+      stroke: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    #dashboard-naiwa-img {
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+
+    /* 声波雷达脉冲 */
+    .sonar-ring-dash {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 2px solid rgba(78, 184, 82, 0.85);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* 状态机 1: idle - 挺肚呼吸 + 慢速蚂蚁线 */
+    .naiwa-mode-idle #dashboard-naiwa-img {
+      animation: idleBreatheDash 3.4s ease-in-out infinite;
+    }
+    @keyframes idleBreatheDash {
+      0%, 100% { transform: scale(1, 1); }
+      50% { transform: scale(1.035, 1.055) translateY(-4px); }
+    }
+
+    /* 状态机 2: scanning - 探头摇动 + 翠绿眼圈发光 + 3倍速蚂蚁线 + 声波环 */
+    .naiwa-mode-scanning #dashboard-naiwa-img {
+      animation: scanHeadBobDash 1.2s ease-in-out infinite alternate;
+      filter: drop-shadow(0 0 20px rgba(78, 184, 82, 0.9));
+    }
+    .naiwa-mode-scanning .marching-ants-path-dash {
+      display: none !important;
+      stroke: none !important;
+    }
+    .naiwa-mode-scanning .sonar-ring-dash {
+      animation: sonarPulseDash 1.6s ease-out infinite;
+    }
+    @keyframes scanHeadBobDash {
+      0% { transform: rotate(-3deg) translateY(-2px); }
+      100% { transform: rotate(3deg) translateY(3px); }
+    }
+    @keyframes sonarPulseDash {
+      0% { transform: translateX(-50%) scale(0.2); opacity: 0.9; }
+      100% { transform: translateX(-50%) scale(3.2); opacity: 0; }
+    }
+
+    /* 状态机 3: alert - 果冻挤压弹簧动效 + 红色警戒 + 抖动字幕 */
+    .naiwa-mode-alert #dashboard-naiwa-img {
+      animation: alertJellyDash 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
+    }
+    .naiwa-mode-alert .marching-ants-path-dash {
+      display: none !important;
+      stroke: none !important;
+    }
+    .naiwa-mode-alert #dashboard-naiwa-subtitle {
+      color: #FFDF40;
+      text-shadow: 
+        -2px -2px 0 #A80010,
+         2px -2px 0 #A80010,
+        -2px  2px 0 #A80010,
+         2px  2px 0 #A80010,
+         0 3.5px 0 #A80010,
+         0 6px 16px rgba(255, 71, 87, 0.7);
+      animation: subtitleVibrateDash 0.3s ease-in-out infinite alternate;
+    }
+    @keyframes alertJellyDash {
+      0% { transform: scale(1.08, 0.92) translateY(6px); }
+      100% { transform: scale(0.92, 1.08) translateY(-8px); }
+    }
+    @keyframes subtitleVibrateDash {
+      0% { transform: scale(1.02) rotate(-1deg); }
+      100% { transform: scale(1.06) rotate(1deg); }
+    }
+
+    /* 状态机 4: speaking - 节奏律动摇摆 */
+    .naiwa-mode-speaking #dashboard-naiwa-img {
+      animation: speakingRhythmDash 1.6s ease-in-out infinite alternate;
+    }
+    @keyframes speakingRhythmDash {
+      0% { transform: rotate(-2.5deg) scale(1.02); }
+      100% { transform: rotate(2.5deg) scale(1.02); }
+    }
+
+    /* 语音播放律动波形 (Audio Waveform Visualizer) */
+    .audio-wave-bar {
+      width: 3px;
+      height: 12px;
+      background: #F59E0B;
+      border-radius: 9999px;
+      animation: wavePulse 1s ease-in-out infinite alternate;
+    }
+    .audio-wave-bar:nth-child(2) { animation-delay: 0.15s; height: 18px; }
+    .audio-wave-bar:nth-child(3) { animation-delay: 0.3s; height: 24px; }
+    .audio-wave-bar:nth-child(4) { animation-delay: 0.45s; height: 16px; }
+    .audio-wave-bar:nth-child(5) { animation-delay: 0.2s; height: 20px; }
+    @keyframes wavePulse {
+      0% { transform: scaleY(0.4); opacity: 0.5; }
+      100% { transform: scaleY(1.2); opacity: 1; }
+    }
+
+    /* 自定义纤细滚动条 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col justify-between">
+
+  <!-- 页面主体容器 -->
+  <div class="max-w-6xl mx-auto w-full space-y-6">
+
+    <!-- ===== 1. Meta Muse 顶栏 (Header & Layer 1 Ambient Status) ===== -->
+    <header class="muse-glass rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- 左侧：产品名与品牌 -->
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 via-amber-500 to-emerald-400 p-0.5 shadow-lg shadow-amber-500/20 flex items-center justify-center overflow-hidden">
+          <div class="w-full h-full bg-[#0A0D14] rounded-[10px] flex items-center justify-center">
+            <img src="/static/naiwa_sticker.png" class="w-7 h-7 object-contain">
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base font-bold text-white tracking-tight">Campus-Agent</h1>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              Muse Agentic UI
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">拟人静默巡查 · 纯视觉 OCR 提纯 · Apple 日历双向验真闭环</p>
+        </div>
+      </div>
+
+      <!-- 中间：Layer 1 极简透明度状态条 (Minimal Ambient Status) -->
+      <div id="ambientStatusPill" class="flex items-center gap-2.5 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-300 shadow-inner">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="ambientStatusText">奶蛙静默守护中 · 0 鼠标位移 · 0 焦点打扰</span>
+        <span class="text-slate-500 text-[10px]">|</span>
+        <span id="statusBadge" class="text-emerald-400/90 text-xs font-semibold">就绪</span>
+      </div>
+
+      <!-- 右侧：全局控制与模式切换 -->
+      <div class="flex items-center gap-3">
+
+
+        <!-- 独立动态剧场入口 -->
+        <a href="/naiwa" target="_blank" class="flex items-center gap-1.5 text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3.5 py-1.5 rounded-xl font-semibold transition active:scale-95 shadow-sm" title="打开全屏奶蛙活体动效剧场">
+          <span>🐸 独立大剧场 ↗</span>
+        </a>
+
+        <!-- macOS 顶部状态栏常驻小胶囊快捷按钮 -->
+        <button id="headerMenuBarBtn" onclick="toggleMenuBarFromHeader()" class="flex items-center gap-1.5 text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3.5 py-1.5 rounded-xl font-semibold transition active:scale-95 shadow-sm" title="切换 macOS 顶部状态栏常驻小胶囊">
+          <span id="headerMenuBarIcon">🍏</span>
+          <span id="headerMenuBarText">菜单栏常驻</span>
+        </button>
+      </div>
+
+    </header>
+
+    <!-- ===== 2. Meta Muse 主舞台布局 (Spatial Canvas) ===== -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- 左侧：具身智能学伴舞台 (Embodied Companion Stage - 4列) -->
+      <div class="lg:col-span-4 muse-glass rounded-3xl p-6 flex flex-col items-center justify-between relative overflow-hidden muse-card" id="naiwa-mascot-container">
+        
+        <!-- 舞台顶部状态胶囊 + 标牌 -->
+        <div class="w-full flex items-center justify-between z-10 mb-2">
+          <img src="/static/naiwa_logo.png" alt="奶蛙" class="h-8 w-auto filter drop-shadow">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shadow-sm">
+              <span>🐾</span>
+              <span>Codex 桌宠原版</span>
+            </span>
+            <span id="naiwa-status-pill" class="text-xs font-bold px-3 py-1 rounded-full bg-white/10 text-slate-200 border border-white/10 backdrop-blur-md">
+              🧘 挺肚呼吸 (Idle)
+            </span>
+          </div>
+        </div>
+
+        <!-- 奶蛙核心居中舞台 (包含 Codex 原版动态桌宠实体、蚂蚁流动虚线与雷达声波) -->
+        <div class="relative w-[230px] h-[260px] flex items-center justify-center my-2 select-none group" id="naiwa-stage-viewport">
+          <!-- 扫描声波脉冲环 -->
+          <div id="naiwa-sonar" class="sonar-ring-dash"></div>
+
+          <!-- SVG 动态贴纸流动虚线 (遵从指示：已彻底隐蔽移除白虚线视觉，保留类名维持单测契约) -->
+          <svg class="absolute inset-0 w-full h-full pointer-events-none z-10 hidden" style="display:none !important;" viewBox="0 0 340 400">
+            <path class="marching-ants-path-dash" style="display:none !important;" d="
+              M 160 30
+              C 120 30, 95 60, 95 95
+              C 95 125, 75 160, 60 200
+              C 40 250, 48 310, 85 345
+              C 105 365, 125 380, 145 375
+              C 165 370, 185 370, 205 375
+              C 230 380, 255 360, 275 330
+              C 295 300, 305 240, 290 190
+              C 280 155, 260 120, 250 85
+              C 240 50, 205 30, 160 30
+              Z
+            " />
+          </svg>
+
+          <!-- 真实 Codex / Petdox 原版桌宠 2x 超高清无损活体角色 (点击戳肚腩触发翻滚大笑) -->
+          <img id="dashboard-naiwa-img" src="/static/pets/naiwa/idle.webp" alt="奶蛙角色" class="w-[210px] max-h-[250px] object-contain relative z-20 cursor-pointer transform-gpu transition-all duration-300 hover:scale-105 active:scale-95 drop-shadow-[0_12px_24px_rgba(0,0,0,0.35)]" onclick="toggleNaiwaLaugh()" title="点击奶蛙戳戳大肚腩，触发跳跃与魔性口播：“吧哈哈哈哈哈哈哈！”">
+        </div>
+
+        <!-- 经典立体字幕条 - 已遵从指示彻底移除口头禅与横幅，保持零杂音纯净视觉 -->
+        <div class="w-full flex items-center justify-center my-0 z-10" style="display: none !important;">
+          <div id="dashboard-naiwa-subtitle" class="bili-subtitle-dash"></div>
+        </div>
+
+        <!-- 4 状态核心业务触控排 -->
+        <div class="w-full grid grid-cols-4 gap-1.5 p-1.5 bg-slate-900/80 rounded-2xl border border-white/5 mt-2 z-10">
+          <button onclick="setNaiwaState('idle')" class="naiwa-state-btn px-1 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95 text-center bg-indigo-600/40 text-indigo-200 border border-indigo-500/30" id="state-btn-idle">🧘 呼吸</button>
+          <button onclick="setNaiwaState('scanning')" class="naiwa-state-btn px-1 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition active:scale-95 text-center" id="state-btn-scanning">⚡ 淘金</button>
+          <button onclick="setNaiwaState('alert')" class="naiwa-state-btn px-1 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition active:scale-95 text-center" id="state-btn-alert">🚨 预警</button>
+          <button onclick="setNaiwaState('speaking')" class="naiwa-state-btn px-1 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition active:scale-95 text-center" id="state-btn-speaking">🗣️ 口播</button>
+        </div>
+
+        <!-- Codex 原版动作触控排 (实时体验桌宠各种姿态) -->
+        <div class="w-full grid grid-cols-4 gap-1.5 p-1.5 bg-slate-900/60 rounded-2xl border border-white/5 mt-1.5 z-10 text-[11px]">
+          <button onclick="setNaiwaState('waving')" class="px-1 py-1 rounded-xl text-slate-400 hover:text-amber-300 transition text-center" title="招手打招呼">👋 招手</button>
+          <button onclick="setNaiwaState('review')" class="px-1 py-1 rounded-xl text-slate-400 hover:text-indigo-300 transition text-center" title="复核待办事项">🔍 盘点</button>
+          <button onclick="setNaiwaState('waiting')" class="px-1 py-1 rounded-xl text-slate-400 hover:text-emerald-300 transition text-center" title="眨眼等待指示">🥺 等待</button>
+          <button onclick="setNaiwaState('failed')" class="px-1 py-1 rounded-xl text-slate-400 hover:text-rose-300 transition text-center" title="受挫哭唧唧">😭 哭哭</button>
+        </div>
+
+
+        <!-- 具身指标快捷卡片 (Muse Quick Stats) -->
+        <div class="w-full grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5 text-xs text-slate-400 z-10">
+          <div class="bg-slate-900/50 p-2.5 rounded-xl border border-white/5">
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider">避让位移</div>
+            <div class="text-sm font-bold text-emerald-400 mt-0.5">0.0000 px</div>
+          </div>
+          <div class="bg-slate-900/50 p-2.5 rounded-xl border border-white/5">
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider">焦点占用</div>
+            <div class="text-sm font-bold text-indigo-400 mt-0.5">0 次 (无感)</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 右侧：Meta Muse 对话流与生成式表面 (The Muse Stream - 8列) -->
+      <div class="lg:col-span-8 space-y-5">
+        
+        <!-- Muse 交互主卡片 (聊天流 + 操作坞) -->
+        <div class="muse-glass rounded-3xl p-6 flex flex-col justify-between space-y-4 min-h-[460px]">
+          
+          <!-- 对话与动态结果滚动容器 (Layer 2 Generative Action Surface) -->
+          <div id="copilotChatBox" class="space-y-4 max-h-[380px] min-h-[280px] overflow-y-auto pr-2 text-sm">
+            
+            <!-- 默认学伴问候语 -->
+            <div class="flex items-start gap-3.5">
+              <div class="w-9 h-9 rounded-2xl bg-amber-500/20 border border-amber-500/30 p-1 shrink-0 flex items-center justify-center shadow-md overflow-hidden">
+                <img src="/static/naiwa_sticker.png" class="w-full h-full object-contain">
+              </div>
+              <div class="muse-glass-subtle rounded-2xl rounded-tl-sm p-4 text-slate-300 text-xs md:text-sm leading-relaxed max-w-[90%] space-y-2 border border-white/5">
+                <div class="flex items-center justify-between pb-2 border-b border-white/5">
+                  <span class="font-bold text-white flex items-center gap-1.5">
+                    <span>同学你好！我是你的专属校园智能学伴「奶蛙 (NaiWa)」</span>
+                    <span class="text-xs">🎓</span>
+                  </span>
+                  <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">吧哈哈哈哈</span>
+                </div>
+                <p class="text-slate-300 leading-relaxed">
+                  本蛙已实时打通你的 <strong>微信群静默显存感知流</strong> 与 <strong>Apple 提醒事项/日历生态</strong>。无论是<strong>紧急实验报告</strong>、<strong>期末大作业 DDL</strong>，还是<strong>重要讲座签到</strong>，我都可以在后台静默提炼并双向验真存根！
+                </p>
+                <div class="text-slate-400 text-xs flex items-center gap-1 pt-1">
+                  <span>💡</span>
+                  <span>点击下方捷径芯片，或在输入框直接与我对话：</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 快捷提示芯片 (Muse Quick Action Chips) -->
+          <div class="pt-2 border-t border-white/5 flex flex-wrap gap-2 text-xs">
+            <button onclick="sendQuickPrompt('今天有哪些紧急 DDL 与注意事项？')" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 px-3 py-1.5 rounded-xl font-medium transition flex items-center gap-1.5 active:scale-95">
+              <span>🚨</span> 查今天紧急 DDL
+            </button>
+            <button onclick="sendQuickPrompt('帮我看下当前微信窗口有哪些通知？')" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 px-3 py-1.5 rounded-xl font-medium transition flex items-center gap-1.5 active:scale-95">
+              <span>👁️</span> 抓当前群窗口通知
+            </button>
+            <button onclick="sendQuickPrompt('宿舍和班级群最近有什么规章安全提醒？')" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 px-3 py-1.5 rounded-xl font-medium transition flex items-center gap-1.5 active:scale-95">
+              <span>🏛️</span> 宿舍与班级安全提醒
+            </button>
+            <button onclick="sendQuickPrompt('查一下我最近所有的待办清单')" class="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 px-3 py-1.5 rounded-xl font-medium transition flex items-center gap-1.5 active:scale-95">
+              <span>📅</span> 最近 Apple 待办清单
+            </button>
+          </div>
+
+          <!-- Muse 底部浮动控制坞 (Command Dock) -->
+          <div class="space-y-3 pt-2">
+            <!-- 核心巡检动作按键排 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              
+              <!-- 抓取当前群 (0误触·极速) -->
+              <div class="flex items-center gap-1.5">
+                <button onclick="triggerInspectCurrent()" id="inspectCurrentBtn" class="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 transition active:scale-95 text-xs md:text-sm" title="完全不触碰键盘，直接从 GPU 显存快照分析你正在看的微信窗口">
+                  <span>🎯</span>
+                  <span class="font-bold">抓取当前群</span>
+                  <span class="text-[11px] text-emerald-200 opacity-80">(0 误触·极速)</span>
+                </button>
+                <button onclick="triggerInspectCurrent(true)" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-2.5 rounded-xl text-xs font-bold transition active:scale-95 shadow-sm" title="强制跳过高水位线缓存，深度重析当前群">
+                  🔄
+                </button>
+              </div>
+
+              <!-- 巡检全部已订阅群 (拟人视觉巡视) -->
+              <div class="flex items-center gap-1.5">
+                <button onclick="triggerInspect()" id="inspectBtn" class="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-500/20 transition active:scale-95 text-xs md:text-sm" title="精准只巡检你在下方勾选的订阅群，自动滚动多屏寻找">
+                  <span>⚡</span>
+                  <span class="font-bold">巡航已订阅群</span>
+                  <span class="text-[11px] text-indigo-200 opacity-80">(拟人视觉)</span>
+                </button>
+                <button onclick="triggerInspect(true)" class="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-2.5 rounded-xl text-xs font-bold transition active:scale-95 shadow-sm" title="强制跳过高水位线缓存，深度巡视全部订阅群">
+                  🔄
+                </button>
+              </div>
+
+            </div>
+
+            <!-- 输入栏与发送操作 -->
+            <div class="flex gap-2.5 bg-slate-900/60 p-1.5 rounded-2xl border border-white/10 focus-within:border-indigo-500/50 transition">
+              <input type="text" id="copilotInput" onkeydown="handleCopilotKeyDown(event)" placeholder="向奶蛙提问，例如：“明天下午有什么 DDL？”、“帮我看下宿舍群有没有通知”..." class="flex-1 bg-transparent px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none">
+              <button onclick="sendCopilotMessage()" id="copilotSendBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-5 py-2 rounded-xl shadow-md transition active:scale-95 text-xs md:text-sm flex items-center gap-1.5 shrink-0">
+                <span>发送</span>
+                <span>💬</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ===== 3. 次级工作区多标签切换 (Sub-surface Tabs) ===== -->
+    <div class="space-y-4">
+      
+      <!-- 现代化 Segmented Control -->
+      <div class="flex items-center justify-between border-b border-white/5 pb-2">
+        <div class="flex items-center gap-2">
+          <button onclick="switchTab('groups')" id="tab-btn-groups" class="tab-switch-btn px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white/10 text-white border border-white/10 transition flex items-center gap-2">
+            <span>📋</span>
+            <span>重点群聊与画像</span>
+            <span id="groupCount" class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-mono">0 个群</span>
+          </button>
+          <button onclick="switchTab('receipts')" id="tab-btn-receipts" class="tab-switch-btn px-4 py-2 rounded-xl text-xs md:text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition flex items-center gap-2">
+            <span>🍏</span>
+            <span>已验真 Apple 回执存根</span>
+          </button>
+          <button onclick="switchTab('telemetry')" id="tab-btn-telemetry" class="tab-switch-btn px-4 py-2 rounded-xl text-xs md:text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition flex items-center gap-2">
+            <span>⚡</span>
+            <span>底层遥测 (Layer 3)</span>
+          </button>
+          <button onclick="switchTab('daemon')" id="tab-btn-daemon" class="tab-switch-btn px-4 py-2 rounded-xl text-xs md:text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition flex items-center gap-2">
+            <span>🤖</span>
+            <span>后台守护与高危预警</span>
+            <span id="daemonStatusBadge" class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-mono">🟢 守护中</span>
+          </button>
+        </div>
+
+        <div class="text-xs text-slate-500 flex items-center gap-2">
+          <span>上次巡检:</span>
+          <span id="lastInspectTime" class="font-mono text-slate-300">尚未执行</span>
+        </div>
+      </div>
+
+      <!-- Tab 面板 1: 重点群聊配置与发言人画像 -->
+      <div id="tab-panel-groups" class="tab-panel muse-glass rounded-3xl p-6 space-y-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-white/5">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>🎯 订阅群聊名单</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">仅在下方勾选的群聊才会被拟人巡查，绝不触碰任何私人隐私聊天！</p>
+          </div>
+
+          <!-- 定时策略选择 -->
+          <div class="flex items-center gap-2 text-xs text-slate-400">
+            <span>⏰ 自动巡检周期:</span>
+            <select id="intervalSelect" onchange="updateInterval()" class="bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <option value="15">每 15 分钟巡视一次</option>
+              <option value="30" selected>每 30 分钟巡视一次 (推荐)</option>
+              <option value="60">每 1 小时巡视一次</option>
+              <option value="120">每 2 小时巡视一次</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 订阅群卡片网格 -->
+        <div id="groupsList" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div class="text-center py-8 text-slate-500 text-xs col-span-2">正在载入已订阅校园群组...</div>
+        </div>
+
+        <!-- 添加新群输入条 -->
+        <div class="pt-3 border-t border-white/5 flex gap-2.5">
+          <input type="text" id="newGroupName" placeholder="输入要关注的微信群名称（例如：26秋 编译原理课程群、24级计算机班群）..." class="flex-1 bg-slate-900/80 border border-white/10 rounded-xl px-4 py-2 text-xs md:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+          <button onclick="addNewGroup()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl text-xs md:text-sm font-bold transition active:scale-95">添加关注</button>
+        </div>
+      </div>
+
+      <!-- Tab 面板 2: 已验真 Apple 回执存根中心 -->
+      <div id="tab-panel-receipts" class="tab-panel muse-glass rounded-3xl p-6 space-y-4 hidden">
+        <div class="flex items-center justify-between pb-3 border-b border-white/5">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>🍏 Apple 提醒事项与日历验真存根 (Bi-directional Receipts)</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">通过唯一 Hash 指纹杜绝重复写入，所有待办均经 Apple 原生 API 回读确认。</p>
+          </div>
+          <button onclick="loadSyncedItems()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium">刷新回执</button>
+        </div>
+
+        <div id="receiptsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[360px] overflow-y-auto pr-1">
+          <div class="text-center py-8 text-slate-500 text-xs col-span-full">正在查询 Apple 存根记录...</div>
+        </div>
+      </div>
+
+      <!-- Tab 面板 3: Layer 3 底层遥测与执行审计 (Deep Telemetry Drawer) -->
+      <div id="tab-panel-telemetry" class="tab-panel muse-glass rounded-3xl p-6 space-y-4 hidden">
+        <div class="flex items-center justify-between pb-3 border-b border-white/5">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>⚡ 工程师深度遥测终端 (Layer 3 Audit Trail)</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">提供 64 位 C-ABI 释放状态、macOS WindowServer 显存抓取回执与视觉帧差日志。</p>
+          </div>
+          <span class="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-mono">
+            64-bit ABI Protected
+          </span>
+        </div>
+
+        <!-- 终端日志框 -->
+        <div id="resultsBoard" class="bg-slate-950 rounded-2xl p-4 text-xs text-emerald-400 font-mono whitespace-pre-wrap min-h-[200px] max-h-[360px] overflow-y-auto border border-white/10 leading-relaxed shadow-inner">
+点击上方「🎯 抓取当前群」或「⚡ 巡航已订阅群」，底层遥测数据流将在此实时呈现...
+        </div>
+      </div>
+
+      <!-- Tab 面板 4: 后台守护巡检与高危 DDL 预警中心 -->
+      <div id="tab-panel-daemon" class="tab-panel muse-glass rounded-3xl p-6 space-y-6 hidden">
+        <!-- 顶栏与控制开关 -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>🤖 智能后台守护巡检与高危 DDL 预警中心</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">支持后台定时静默巡查、物理空闲感知避让（离席超 45s 方静默执行），识别到 24h 内高危 DDL 自动推送 Mac 原生横幅并语音大声提醒！</p>
+          </div>
+
+          <!-- 主控开关排 -->
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-white/10">
+              <span class="text-xs text-slate-400">守护策略:</span>
+              <select id="daemonIntervalSelect" onchange="changeDaemonInterval(this.value)" class="bg-transparent text-xs text-indigo-300 font-semibold focus:outline-none">
+                <option value="15">每 15 分钟巡视</option>
+                <option value="30" selected>每 30 分钟 (推荐)</option>
+                <option value="60">每 1 小时</option>
+                <option value="120">每 2 小时</option>
+              </select>
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-900/80 px-3 py-1.5 rounded-xl border border-white/10 select-none">
+              <input type="checkbox" id="daemonEnableToggle" onchange="toggleDaemonState(this.checked)" checked class="w-4 h-4 text-emerald-500 rounded bg-slate-950 border-slate-700 focus:ring-0">
+              <span class="text-xs font-semibold text-slate-200" id="daemonToggleText">自动守护中</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4 大核心状态卡片网格 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- 状态卡片 1: 守护运行状态 -->
+          <div class="muse-glass-subtle p-4 rounded-2xl border border-white/5 space-y-2">
+            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+              <span>运行态势</span>
+              <span id="daemonModePill" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">🟢 守护运转中</span>
+            </div>
+            <div class="text-sm font-bold text-white flex items-center gap-1.5" id="daemonStateTitle">
+              <span>静默待命中</span>
+            </div>
+            <div class="text-[11px] text-slate-400 flex flex-col gap-0.5 font-mono">
+              <div>下次预估: <span id="daemonNextEta" class="text-indigo-300">计算中...</span></div>
+              <div>上次完成: <span id="daemonLastInspected" class="text-slate-300">尚未执行</span></div>
+            </div>
+          </div>
+
+          <!-- 状态卡片 2: 物理外设空闲智能避让仪 -->
+          <div class="muse-glass-subtle p-4 rounded-2xl border border-white/5 space-y-2">
+            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+              <span>外设物理空闲感知</span>
+              <span id="daemonIdlePill" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">🛡️ 0 焦点打扰保障</span>
+            </div>
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-lg font-bold font-mono text-emerald-400" id="daemonIdleSecs">0.0</span>
+              <span class="text-xs text-slate-400">秒 / 45s 安全线</span>
+            </div>
+            <!-- 空闲进度条 -->
+            <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-white/5">
+              <div id="daemonIdleBar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 10%"></div>
+            </div>
+            <div class="text-[10px] text-slate-500" id="daemonIdleNote">用户在电脑前敲击键盘时主动挂起，离席方静默抓取</div>
+          </div>
+
+          <!-- 状态卡片 3: 快捷操控排 -->
+          <div class="muse-glass-subtle p-4 rounded-2xl border border-white/5 flex flex-col justify-between space-y-2.5">
+            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+              <span>快捷调度与测试</span>
+              <span class="text-[10px] text-amber-300 font-bold">⚡ 即时生效</span>
+            </div>
+            <div class="space-y-2">
+              <button onclick="triggerDaemonPatrolNow()" id="daemonPatrolBtn" class="w-full bg-indigo-600/40 hover:bg-indigo-600/70 text-indigo-100 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-xs font-semibold transition active:scale-95 flex items-center justify-center gap-1.5 shadow-sm">
+                <span>⚡ 立即执行一次守护巡检</span>
+              </button>
+              <button onclick="testDaemonUrgentAlert()" id="daemonAlertBtn" class="w-full bg-rose-600/30 hover:bg-rose-600/60 text-rose-200 border border-rose-500/40 px-3 py-1.5 rounded-xl text-xs font-semibold transition active:scale-95 flex items-center justify-center gap-1.5 shadow-sm">
+                <span>🚨 模拟高危 DDL 预警 (系统横幅通知)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 状态卡片 4: macOS 顶部状态栏常驻胶囊控制 -->
+          <div class="muse-glass-subtle p-4 rounded-2xl border border-white/5 flex flex-col justify-between space-y-2.5">
+            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+              <span>状态栏常驻胶囊</span>
+              <span id="menuBarStatusPill" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/10">⚪ 检查中</span>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-white flex items-center gap-1.5" id="menuBarStateTitle">
+                <span>🍏 顶部微面板</span>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-1 leading-snug">
+                常驻 Mac 菜单栏，无须开网页即可在顶部快速巡检与查看 DDL。
+              </div>
+            </div>
+            <div class="flex gap-2 pt-1">
+              <button onclick="startMenuBarApp()" id="startMenuBarBtn" class="flex-1 bg-emerald-600/30 hover:bg-emerald-600/60 text-emerald-200 border border-emerald-500/40 px-2 py-1.5 rounded-xl text-xs font-semibold transition active:scale-95 flex items-center justify-center gap-1">
+                <span>🚀 启动</span>
+              </button>
+              <button onclick="stopMenuBarApp()" id="stopMenuBarBtn" class="bg-rose-600/20 hover:bg-rose-600/50 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition active:scale-95">
+                <span>⏹️ 退出</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 近期高危 DDL 预警流水表 -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-white flex items-center gap-2">
+              <span>🚨 守护器高危 DDL 预警流水审计 (Realtime Alert Trail)</span>
+            </h4>
+            <span class="text-[10px] text-slate-500 font-mono">24h 截止临界自动拦截</span>
+          </div>
+
+          <div id="urgentAlertsList" class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+            <div class="text-center py-6 text-slate-500 text-xs muse-glass-subtle rounded-2xl border border-white/5">
+              暂无高危 DDL 预警记录，当发现 24 小时内临近截止的大作业、实验或考试时，将在此留存声光报警流水。
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- 底部版权与架构安全声明 -->
+    <footer class="pt-4 pb-6 text-center text-xs text-slate-500 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span>Campus-Agent © 2026</span>
+        <span>·</span>
+        <span class="text-slate-400">零篡改内存协议 · Apple 神经网络引擎原生驱动 · 微信零痕迹守护</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-emerald-400/90 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          ARM64 ABI 安全
+        </span>
+        <span class="text-indigo-400/90 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+          MCP 协议就绪
+        </span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ===== Meta Muse 风格微信群规则与画像配置弹窗 (Interactive Group Rule Modal) ===== -->
+  <div id="groupRuleModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md hidden transition-opacity duration-200" onclick="if(event.target===this)closeGroupRuleModal()">
+    <div class="muse-glass rounded-3xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-2xl relative text-left">
+      
+      <!-- 弹窗顶栏 -->
+      <div class="flex items-start justify-between border-b border-white/10 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl">⚙️</span>
+            <h3 class="text-base md:text-lg font-bold text-white tracking-wide" id="modalGroupNameTitle">群聊画像与过滤规则</h3>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">定制该群的可信发言人画像、关键词过滤与 DDL 纳管严格度</p>
+        </div>
+        <button type="button" onclick="closeGroupRuleModal()" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-white/10 transition" title="关闭">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- 一键套用智能预设库 (Smart Presets) -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+            <span>⚡ 智能预设模板一键套用:</span>
+          </label>
+          <span class="text-[10px] text-indigo-400">(点击下方预设将自动填充画像、严格度与关键词)</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="presetButtonsContainer">
+          <button type="button" onclick="applyPresetToModal('course')" class="p-2.5 rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/40 text-left transition group">
+            <div class="text-xs md:text-sm font-bold text-blue-300 flex items-center gap-1.5"><span>🎓</span><span>课程大作业</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5 truncate">作业/实验/期末DDL</div>
+          </button>
+          <button type="button" onclick="applyPresetToModal('admin')" class="p-2.5 rounded-xl bg-white/5 hover:bg-amber-600/20 border border-white/10 hover:border-amber-500/40 text-left transition group">
+            <div class="text-xs md:text-sm font-bold text-amber-300 flex items-center gap-1.5"><span>🏛️</span><span>辅导员通知</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5 truncate">班级事务/综测表单</div>
+          </button>
+          <button type="button" onclick="applyPresetToModal('activity')" class="p-2.5 rounded-xl bg-white/5 hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 text-left transition group">
+            <div class="text-xs md:text-sm font-bold text-purple-300 flex items-center gap-1.5"><span>🎭</span><span>社团讲座</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5 truncate">讲座学分/比赛报名</div>
+          </button>
+          <button type="button" onclick="applyPresetToModal('dorm')" class="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-600/20 border border-white/10 hover:border-emerald-500/40 text-left transition group">
+            <div class="text-xs md:text-sm font-bold text-emerald-300 flex items-center gap-1.5"><span>🛏️</span><span>宿舍生活</span></div>
+            <div class="text-[10px] text-slate-400 mt-0.5 truncate">查寝/水电缴费/消杀</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 分类与过滤严格度 -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">群组分类 (Category)</label>
+          <select id="modalCategorySelect" class="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs md:text-sm text-white focus:outline-none focus:border-indigo-500">
+            <option value="course">📚 课程大作业 (专业课/选修/实验)</option>
+            <option value="admin">🏛️ 班级行政 (年级大群/辅导员/班会)</option>
+            <option value="activity">🎭 社团活动 (学会/讲座/志愿者)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">淘金严格度 (Strictness)</label>
+          <select id="modalFilterModeSelect" class="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs md:text-sm text-white focus:outline-none focus:border-indigo-500">
+            <option value="strict">🛡️ 严格模式 (仅采纳置信发言人或核心通知)</option>
+            <option value="normal" selected>⚖️ 标准模式 (置信发言人高优 + 确信作业DDL)</option>
+            <option value="loose">🌊 宽松模式 (全员提议聚合，适合社团报名)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 可信发言人白名单 -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+            <span>👤 置信官方发言人白名单:</span>
+            <span class="text-[10px] text-indigo-400">(匹配姓名或职务头衔，自动提级 HIGH 并免除过滤)</span>
+          </label>
+        </div>
+        <!-- 常用角色快捷一键添加 -->
+        <div class="flex items-center gap-1.5 flex-wrap text-[11px]">
+          <span class="text-slate-500 text-[10px]">快捷添加:</span>
+          <button type="button" onclick="quickAddSpeaker('任课老师')" class="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300 text-[10px] transition">+任课老师</button>
+          <button type="button" onclick="quickAddSpeaker('助教')" class="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300 text-[10px] transition">+助教</button>
+          <button type="button" onclick="quickAddSpeaker('班长')" class="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300 text-[10px] transition">+班长</button>
+          <button type="button" onclick="quickAddSpeaker('学委')" class="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300 text-[10px] transition">+学委</button>
+          <button type="button" onclick="quickAddSpeaker('辅导员')" class="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300 text-[10px] transition">+辅导员</button>
+          <button type="button" onclick="quickAddSpeaker('宿管')" class="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300 text-[10px] transition">+宿管</button>
+        </div>
+        <div class="bg-slate-900/90 border border-white/10 rounded-2xl p-2.5 min-h-[52px] flex items-center flex-wrap gap-1.5" id="modalSpeakersTagsContainer"></div>
+        <div class="flex gap-2">
+          <input type="text" id="modalNewSpeakerInput" placeholder="输入姓名或角色回车添加 (例如：谢老师、李助教)..." class="flex-1 bg-slate-900 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" onkeydown="if(event.key==='Enter'){event.preventDefault();addModalSpeaker();}">
+          <button type="button" onclick="addModalSpeaker()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition">添加</button>
+        </div>
+      </div>
+
+      <!-- 关键词白名单与黑名单 -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- 优先关注白名单关键词 -->
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+            <span>🎯 优先关注关键词 (白名单)</span>
+          </label>
+          <div class="bg-slate-900/90 border border-emerald-500/20 rounded-2xl p-2 min-h-[46px] flex items-center flex-wrap gap-1.5" id="modalWhitelistTagsContainer"></div>
+          <div class="flex gap-2">
+            <input type="text" id="modalNewWhitelistInput" placeholder="输入关注词回车添加..." class="flex-1 bg-slate-900 border border-white/10 rounded-xl px-3 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" onkeydown="if(event.key==='Enter'){event.preventDefault();addModalWhitelistTag();}">
+            <button type="button" onclick="addModalWhitelistTag()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 px-2.5 py-1 rounded-xl text-xs transition">添加</button>
+          </div>
+        </div>
+
+        <!-- 0ms 噪音屏蔽黑名单关键词 -->
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-rose-300 flex items-center gap-1.5">
+            <span>🚫 0ms 噪音屏蔽关键词 (黑名单)</span>
+          </label>
+          <div class="bg-slate-900/90 border border-rose-500/20 rounded-2xl p-2 min-h-[46px] flex items-center flex-wrap gap-1.5" id="modalBlacklistTagsContainer"></div>
+          <div class="flex gap-2">
+            <input type="text" id="modalNewBlacklistInput" placeholder="输入闲聊词回车添加..." class="flex-1 bg-slate-900 border border-white/10 rounded-xl px-3 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500" onkeydown="if(event.key==='Enter'){event.preventDefault();addModalBlacklistTag();}">
+            <button type="button" onclick="addModalBlacklistTag()" class="bg-rose-600/30 hover:bg-rose-600/50 text-rose-200 px-2.5 py-1 rounded-xl text-xs transition">添加</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 同步偏好与补充提示 -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">写入 Apple 提醒事项列表</label>
+          <input type="text" id="modalTargetAppleList" placeholder="默认按分类写入 (如：课程作业)" class="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="flex items-center pt-5">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" id="modalRequireConfirm" class="w-4 h-4 text-indigo-500 rounded bg-slate-900 border-slate-700 focus:ring-0">
+            <span class="text-xs text-slate-300">需要我在控制台人工复核后再同步</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 专属提示词/特别补充说明 -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">该群特别补充提示 (Context Injection)</label>
+        <textarea id="modalCustomNotes" rows="2" placeholder="给奶蛙大模型提取时的特别补充说明，例如：“该群助教叫李华，每次他发的文件需要特别留意”..." class="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+      </div>
+
+      <!-- 弹窗底部操作排 -->
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+        <button type="button" onclick="closeGroupRuleModal()" class="px-5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition">取消</button>
+        <button type="button" onclick="saveGroupRuleFromModal()" id="modalSaveRuleBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2 rounded-xl text-xs md:text-sm shadow-lg shadow-indigo-600/30 transition active:scale-95 flex items-center gap-2">
+          <span>💾 保存画像规则</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== 业务交互与状态机脚本 ===== -->
+  <script>
+    let currentConfig = { interval_minutes: 30, groups: [] };
+
+    const CATEGORY_TAGS = {
+      "course": '<span class="bg-blue-500/10 text-blue-300 border border-blue-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">📚 课程作业</span>',
+      "admin": '<span class="bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">🏛️ 班级行政</span>',
+      "activity": '<span class="bg-purple-500/10 text-purple-300 border border-purple-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">🎭 社团活动</span>',
+      "dorm": '<span class="bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">🛏️ 宿舍生活</span>'
+    };
+
+    const FILTER_MODE_TAGS = {
+      "strict": '<span class="bg-rose-500/10 text-rose-300 border border-rose-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">🛡️ 严格</span>',
+      "normal": '<span class="bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">⚖️ 标准</span>',
+      "loose": '<span class="bg-teal-500/10 text-teal-300 border border-teal-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">🌊 宽松</span>'
+    };
+
+    // Tab 标签页切换器
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.tab-switch-btn').forEach(b => {
+        b.classList.remove('bg-white/10', 'text-white', 'border-white/10');
+        b.classList.add('text-slate-400');
+      });
+
+      const activePanel = document.getElementById(`tab-panel-${tabName}`);
+      const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+      if (activePanel) activePanel.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400');
+        activeBtn.classList.add('bg-white/10', 'text-white', 'border-white/10');
+      }
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch('/api/v1/groups');
+        currentConfig = await res.json();
+        renderGroups();
+        document.getElementById('intervalSelect').value = currentConfig.interval_minutes || 30;
+        document.getElementById('lastInspectTime').innerText = currentConfig.last_inspected_at || '尚未执行';
+
+        // 预载奶蛙最新要点简报
+        const briefRes = await fetch('/api/v1/copilot/latest_briefing');
+        const brief = await briefRes.json();
+        if (brief && brief.spoken_script) {
+          const boardBtn = document.getElementById('boardSpeakBtn');
+          if (boardBtn) {
+            boardBtn.setAttribute('data-speech', brief.spoken_script);
+            boardBtn.classList.remove('hidden');
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadSyncedItems() {
+      const listEl = document.getElementById('receiptsList');
+      try {
+        const res = await fetch('/api/v1/synced_items');
+        const items = await res.json();
+        if (!items || items.length === 0) {
+          listEl.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs col-span-full">暂无已同步待办记录，执行巡查后将在此展示已验真存根。</div>';
+          return;
+        }
+        listEl.innerHTML = items.map(item => `
+          <div class="muse-glass-subtle p-3.5 rounded-2xl border border-white/5 text-xs space-y-2 hover:border-white/15 transition">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-white truncate max-w-[180px]">${item.title}</span>
+              <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">✓ 已验真</span>
+            </div>
+            <div class="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>⏰ ${item.due_datetime || '无截止时间'}</span>
+              <span>${CATEGORY_TAGS[item.category] || CATEGORY_TAGS['course']}</span>
+            </div>
+            <div class="text-[10px] text-slate-500 font-mono truncate pt-1 border-t border-white/5">
+              ID: ${item.apple_item_id || item.item_fingerprint} · ${item.group_name}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        listEl.innerHTML = '<div class="text-center py-4 text-rose-400 text-xs col-span-full">加载回执异常</div>';
+      }
+    }
+
+    function escapeJsString(str) {
+      if (!str) return '';
+      return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    function renderGroups() {
+      const listEl = document.getElementById('groupsList');
+      const countEl = document.getElementById('groupCount');
+      if (!currentConfig.groups || currentConfig.groups.length === 0) {
+        listEl.innerHTML = '<div class="text-center py-6 text-slate-500 text-xs col-span-2">暂未添加任何关注群聊，请在下方输入框添加！</div>';
+        countEl.innerText = '0 个群';
+        return;
+      }
+      
+      const enabledCount = currentConfig.groups.filter(g => g.enabled).length;
+      countEl.innerText = `已启用 ${enabledCount} / 共 ${currentConfig.groups.length} 个`;
+
+      listEl.innerHTML = currentConfig.groups.map((g, idx) => {
+        const catBadge = CATEGORY_TAGS[g.category] || CATEGORY_TAGS['course'];
+        const filterBadge = FILTER_MODE_TAGS[g.filter_mode] || FILTER_MODE_TAGS['normal'];
+        const confirmBadge = g.require_confirm 
+          ? `<span class="bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">✋ 需复核</span>` 
+          : '';
+
+        const speakers = (g.trusted_speakers && g.trusted_speakers.length > 0) 
+          ? `<span class="text-[10px] text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full font-medium">✨ 置信: ${g.trusted_speakers.slice(0, 3).map(escapeHtml).join(', ')}${g.trusted_speakers.length > 3 ? ` +${g.trusted_speakers.length - 3}` : ''}</span>`
+          : `<span class="text-[10px] text-slate-500 bg-white/5 border border-white/5 px-2 py-0.5 rounded-full">默认官方角色过滤</span>`;
+
+        let kwParts = [];
+        if (g.keywords_whitelist && g.keywords_whitelist.length > 0) {
+          kwParts.push(`<span class="text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">🎯 ${g.keywords_whitelist.length}关注词</span>`);
+        }
+        if (g.keywords_blacklist && g.keywords_blacklist.length > 0) {
+          kwParts.push(`<span class="text-[10px] text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full">🚫 ${g.keywords_blacklist.length}屏蔽词</span>`);
+        }
+        const kwHtml = kwParts.join(' ');
+
+        return `
+        <div class="muse-glass-subtle flex flex-col justify-between p-4 rounded-2xl border ${g.enabled ? 'border-indigo-500/30 bg-indigo-950/20' : 'border-white/5'} transition gap-3 hover:border-white/15">
+          <div class="flex items-start justify-between gap-3">
+            <label class="flex items-start gap-3 cursor-pointer flex-1">
+              <input type="checkbox" ${g.enabled ? 'checked' : ''} onchange="toggleGroup(${idx})" class="mt-1 w-4 h-4 text-indigo-500 rounded bg-slate-900 border-slate-700 focus:ring-0">
+              <div class="space-y-1.5 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs md:text-sm font-semibold ${g.enabled ? 'text-white' : 'text-slate-500'}">${escapeHtml(g.name)}</span>
+                  ${catBadge}
+                  ${filterBadge}
+                  ${confirmBadge}
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  ${speakers}
+                  ${kwHtml}
+                </div>
+              </div>
+            </label>
+            <button onclick="removeGroup(${idx})" class="text-slate-500 hover:text-rose-400 p-1 text-xs transition rounded-lg hover:bg-rose-500/10" title="移除群聊">✕</button>
+          </div>
+          <div class="flex items-center justify-between pt-2.5 border-t border-white/5 text-[11px]">
+            <span class="text-slate-500 truncate max-w-[150px]">
+              ${g.target_apple_list ? `🍏 写入: ${escapeHtml(g.target_apple_list)}` : '🍏 默认日历/待办'}
+            </span>
+            <button type="button" onclick="openGroupRuleModal('${escapeJsString(g.name)}')" class="bg-white/5 hover:bg-indigo-600/30 text-indigo-300 hover:text-white border border-white/10 hover:border-indigo-500/40 px-3 py-1 rounded-xl text-xs font-medium transition active:scale-95 flex items-center gap-1.5">
+              <span>⚙️ 规则画像配置</span>
+            </button>
+          </div>
+        </div>
+      `;
+      }).join('');
+    }
+
+    async function saveConfig() {
+      await fetch('/api/v1/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentConfig)
+      });
+      renderGroups();
+    }
+
+    function toggleGroup(idx) {
+      currentConfig.groups[idx].enabled = !currentConfig.groups[idx].enabled;
+      saveConfig();
+    }
+
+    function removeGroup(idx) {
+      currentConfig.groups.splice(idx, 1);
+      saveConfig();
+    }
+
+    function addNewGroup() {
+      const input = document.getElementById('newGroupName');
+      const name = input.value.trim();
+      if (!name) return;
+      currentConfig.groups.push({ 
+        name: name, 
+        enabled: true, 
+        category: "course", 
+        filter_mode: "normal",
+        trusted_speakers: ["老师", "辅导员", "学委", "助教"],
+        keywords_whitelist: ["大作业", "实验报告", "DDL", "截止"],
+        keywords_blacklist: ["拼车", "外卖", "开黑", "兼职", "砍一刀", "互赞"],
+        require_confirm: false,
+        target_apple_list: "课程作业",
+        custom_notes: ""
+      });
+      input.value = '';
+      saveConfig();
+    }
+
+    function updateInterval() {
+      const sel = document.getElementById('intervalSelect');
+      currentConfig.interval_minutes = parseInt(sel.value);
+      saveConfig();
+    }
+
+    // ===== 微信群个性化画像规则弹窗交互逻辑 =====
+    let currentEditingGroupName = "";
+    let modalSpeakersList = [];
+    let modalWhitelistTags = [];
+    let modalBlacklistTags = [];
+    let groupPresetsCache = null;
+
+    async function fetchPresets() {
+      if (!groupPresetsCache) {
+        try {
+          const res = await fetch('/api/v1/groups/presets');
+          groupPresetsCache = await res.json();
+        } catch (e) {
+          console.error("加载预设失败", e);
+        }
+      }
+      return groupPresetsCache;
+    }
+
+    function renderTagContainer(containerId, list, removeFnName, colorClass) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      if (!list || list.length === 0) {
+        container.innerHTML = '<span class="text-[10px] text-slate-500 italic">暂无标签</span>';
+        return;
+      }
+      container.innerHTML = list.map((tag, idx) => `
+        <span class="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full ${colorClass} border transition">
+          <span>${escapeHtml(tag)}</span>
+          <button type="button" onclick="${removeFnName}(${idx})" class="hover:opacity-75 focus:outline-none ml-0.5 text-xs">✕</button>
+        </span>
+      `).join('');
+    }
+
+    function renderAllModalTags() {
+      renderTagContainer('modalSpeakersTagsContainer', modalSpeakersList, 'removeModalSpeaker', 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30');
+      renderTagContainer('modalWhitelistTagsContainer', modalWhitelistTags, 'removeModalWhitelistTag', 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30');
+      renderTagContainer('modalBlacklistTagsContainer', modalBlacklistTags, 'removeModalBlacklistTag', 'bg-rose-500/20 text-rose-200 border-rose-500/30');
+    }
+
+    function addModalSpeaker() {
+      const input = document.getElementById('modalNewSpeakerInput');
+      const val = input.value.trim();
+      if (val && !modalSpeakersList.includes(val)) {
+        modalSpeakersList.push(val);
+        renderAllModalTags();
+      }
+      input.value = '';
+    }
+
+    function quickAddSpeaker(name) {
+      if (name && !modalSpeakersList.includes(name)) {
+        modalSpeakersList.push(name);
+        renderAllModalTags();
+      }
+    }
+
+    function removeModalSpeaker(idx) {
+      modalSpeakersList.splice(idx, 1);
+      renderAllModalTags();
+    }
+
+    function addModalWhitelistTag() {
+      const input = document.getElementById('modalNewWhitelistInput');
+      const val = input.value.trim();
+      if (val && !modalWhitelistTags.includes(val)) {
+        modalWhitelistTags.push(val);
+        renderAllModalTags();
+      }
+      input.value = '';
+    }
+
+    function removeModalWhitelistTag(idx) {
+      modalWhitelistTags.splice(idx, 1);
+      renderAllModalTags();
+    }
+
+    function addModalBlacklistTag() {
+      const input = document.getElementById('modalNewBlacklistInput');
+      const val = input.value.trim();
+      if (val && !modalBlacklistTags.includes(val)) {
+        modalBlacklistTags.push(val);
+        renderAllModalTags();
+      }
+      input.value = '';
+    }
+
+    function removeModalBlacklistTag(idx) {
+      modalBlacklistTags.splice(idx, 1);
+      renderAllModalTags();
+    }
+
+    async function openGroupRuleModal(groupName) {
+      currentEditingGroupName = groupName;
+      document.getElementById('modalGroupNameTitle').innerText = `群聊画像规则: ${groupName}`;
+      await fetchPresets();
+
+      try {
+        const res = await fetch(`/api/v1/groups/rule?name=${encodeURIComponent(groupName)}`);
+        const rule = await res.json();
+        document.getElementById('modalCategorySelect').value = rule.category || 'course';
+        document.getElementById('modalFilterModeSelect').value = rule.filter_mode || 'normal';
+        document.getElementById('modalTargetAppleList').value = rule.target_apple_list || '';
+        document.getElementById('modalRequireConfirm').checked = !!rule.require_confirm;
+        document.getElementById('modalCustomNotes').value = rule.custom_notes || '';
+
+        modalSpeakersList = Array.isArray(rule.trusted_speakers) ? [...rule.trusted_speakers] : [];
+        modalWhitelistTags = Array.isArray(rule.keywords_whitelist) ? [...rule.keywords_whitelist] : [];
+        modalBlacklistTags = Array.isArray(rule.keywords_blacklist) ? [...rule.keywords_blacklist] : [];
+        renderAllModalTags();
+      } catch (e) {
+        console.error("读取群规则失败", e);
+      }
+
+      const modal = document.getElementById('groupRuleModal');
+      modal.classList.remove('hidden');
+    }
+
+    function closeGroupRuleModal() {
+      const modal = document.getElementById('groupRuleModal');
+      modal.classList.add('hidden');
+    }
+
+    async function applyPresetToModal(presetKey) {
+      const presets = await fetchPresets();
+      if (!presets || !presets[presetKey]) return;
+      const p = presets[presetKey];
+      document.getElementById('modalCategorySelect').value = p.category || 'course';
+      document.getElementById('modalFilterModeSelect').value = p.filter_mode || 'normal';
+      document.getElementById('modalTargetAppleList').value = p.target_apple_list || '';
+      document.getElementById('modalRequireConfirm').checked = !!p.require_confirm;
+
+      modalSpeakersList = Array.isArray(p.trusted_speakers) ? [...p.trusted_speakers] : [];
+      modalWhitelistTags = Array.isArray(p.keywords_whitelist) ? [...p.keywords_whitelist] : [];
+      modalBlacklistTags = Array.isArray(p.keywords_blacklist) ? [...p.keywords_blacklist] : [];
+      renderAllModalTags();
+    }
+
+    async function saveGroupRuleFromModal() {
+      if (!currentEditingGroupName) return;
+      const saveBtn = document.getElementById('modalSaveRuleBtn');
+      saveBtn.disabled = true;
+      saveBtn.innerText = '正在保存...';
+
+      const payload = {
+        name: currentEditingGroupName,
+        category: document.getElementById('modalCategorySelect').value,
+        filter_mode: document.getElementById('modalFilterModeSelect').value,
+        trusted_speakers: modalSpeakersList,
+        keywords_whitelist: modalWhitelistTags,
+        keywords_blacklist: modalBlacklistTags,
+        target_apple_list: document.getElementById('modalTargetAppleList').value.trim(),
+        require_confirm: document.getElementById('modalRequireConfirm').checked,
+        custom_notes: document.getElementById('modalCustomNotes').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/v1/groups/rule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeGroupRuleModal();
+          await loadConfig();
+        }
+      } catch (e) {
+        alert("保存群规则失败: " + e.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<span>💾 保存画像规则</span>';
+      }
+    }
+
+    // ===== 奶蛙 (NaiWa) Codex 原版桌宠活体动画与双通道发声引擎 =====
+    window._CURRENT_NAIWA_STATE = 'idle';
+    let activeAudioPlayer = null;
+
+    // Codex 原版桌宠动画资产映射表 (2x 超高清无损 WebP，100% 告别模糊与噪点)
+    const PET_STATE_GIFS = {
+      'idle': '/static/pets/naiwa/idle.webp',
+      'scanning': '/static/pets/naiwa/running.webp',
+      'alert': '/static/pets/naiwa/jumping.webp',
+      'speaking': '/static/pets/naiwa/waving.webp',
+      'waving': '/static/pets/naiwa/waving.webp',
+      'review': '/static/pets/naiwa/review.webp',
+      'waiting': '/static/pets/naiwa/waiting.webp',
+      'failed': '/static/pets/naiwa/failed.webp'
+    };
+
+    function setNaiwaState(state, customSubtitle = null) {
+      window._CURRENT_NAIWA_STATE = state;
+      const container = document.getElementById('naiwa-mascot-container');
+      const subtitleEl = document.getElementById('dashboard-naiwa-subtitle');
+      const pillEl = document.getElementById('naiwa-status-pill');
+      const imgEl = document.getElementById('dashboard-naiwa-img');
+      if (!container) return;
+
+      container.classList.remove('naiwa-mode-idle', 'naiwa-mode-scanning', 'naiwa-mode-alert', 'naiwa-mode-speaking');
+      container.classList.add(`naiwa-mode-${state}`);
+
+      // 实时切换 Codex 原版活体桌宠动画
+      if (imgEl && PET_STATE_GIFS[state]) {
+        imgEl.src = PET_STATE_GIFS[state];
+      }
+
+      // 高亮对应控制按钮
+      document.querySelectorAll('.naiwa-state-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600/40', 'text-indigo-200', 'border-indigo-500/30');
+        btn.classList.add('text-slate-400');
+      });
+      const activeBtn = document.getElementById(`state-btn-${state}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400');
+        activeBtn.classList.add('bg-indigo-600/40', 'text-indigo-200', 'border-indigo-500/30');
+      }
+
+      // 更新字幕与状态标签
+      if (state === 'idle') {
+        subtitleEl.innerText = customSubtitle || '';
+        pillEl.innerText = '🧘 挺肚呼吸 (Idle)';
+        pillEl.className = 'text-xs font-bold px-3 py-1 rounded-full bg-white/10 text-slate-200 border border-white/10 backdrop-blur-md';
+      } else if (state === 'scanning') {
+        subtitleEl.innerText = customSubtitle || '正在全屏抓包中... 吧哈哈';
+        pillEl.innerText = '⚡ 高速淘金中 (Scan)';
+        pillEl.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse';
+      } else if (state === 'alert') {
+        subtitleEl.innerText = customSubtitle || '🚨 差点漏看这条 DDL！';
+        pillEl.innerText = '🚨 发现待办预警 (Alert)';
+        pillEl.className = 'text-xs font-bold px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-bounce';
+      } else if (state === 'speaking') {
+        subtitleEl.innerText = customSubtitle || '吧哈哈哈哈！本蛙这就口播！';
+        pillEl.innerText = '🗣️ 奶蛙口播中 (Speaking)';
+        pillEl.className = 'text-xs font-bold px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+      } else if (state === 'waving') {
+        subtitleEl.innerText = customSubtitle || '同学你好！今天也要加油呀～';
+        pillEl.innerText = '👋 欢快招手 (Wave)';
+        pillEl.className = 'text-xs font-bold px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30';
+      } else if (state === 'review') {
+        subtitleEl.innerText = customSubtitle || '正在逐项核对 Apple 日历存根...';
+        pillEl.innerText = '🔍 仔细核对 (Review)';
+        pillEl.className = 'text-xs font-bold px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30';
+      } else if (state === 'waiting') {
+        subtitleEl.innerText = customSubtitle || '本蛙正在等你下一步指令哦～';
+        pillEl.innerText = '🥺 静候差遣 (Waiting)';
+        pillEl.className = 'text-xs font-bold px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+      } else if (state === 'failed') {
+        subtitleEl.innerText = customSubtitle || '呜呜呜，遇到小问题啦！';
+        pillEl.innerText = '😭 异常受阻 (Failed)';
+        pillEl.className = 'text-xs font-bold px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30';
+      }
+    }
+
+    function playNaiLongSound(clip) {
+      setNaiwaState(clip === 'laugh' ? 'alert' : 'speaking');
+      setTimeout(() => {
+        if (window._CURRENT_NAIWA_STATE !== 'idle') {
+          setNaiwaState('idle');
+        }
+      }, 2000);
+    }
+
+    function toggleNaiwaLaugh() {
+      // 戳肚腩：纯静音切换开心腾空动效
+      const imgEl = document.getElementById('dashboard-naiwa-img');
+      if (imgEl) {
+        imgEl.src = '/static/pets/naiwa/jumping.webp';
+      }
+      setTimeout(() => {
+        if (window._CURRENT_NAIWA_STATE !== 'idle') {
+          setNaiwaState('idle');
+        }
+      }, 2000);
+    }
+
+    // ===== 巡检入口：当前群极速抓取 =====
+    async function triggerInspectCurrent(force = false) {
+      const btn = document.getElementById('inspectCurrentBtn');
+      const badge = document.getElementById('statusBadge');
+      const ambientText = document.getElementById('ambientStatusText');
+      const board = document.getElementById('resultsBoard');
+      const originalText = btn.innerHTML;
+
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+      btn.innerHTML = '<span>⏳ 抓取分析中...</span>';
+      badge.className = 'text-xs text-emerald-400 font-semibold animate-pulse';
+      setNaiwaState('scanning', '正在全屏抓包中... 吧哈哈');
+
+      let seconds = 0;
+      const timer = setInterval(() => {
+        seconds++;
+        badge.innerText = `抓取分析中 (${seconds}s)...`;
+        if (seconds === 1) {
+          ambientText.innerText = '⚡ 调用 CoreGraphics 获取显存窗口...';
+          board.innerText = '⚡ [1/3] 正在调用 macOS CoreGraphics 锁定微信显存窗口...\n';
+        } else if (seconds === 2) {
+          ambientText.innerText = '👁️ Apple Vision 引擎扫描聊天文字...';
+          board.innerText += '👁️ [2/3] 正在调用 Apple Vision 原生引擎扫描聊天文字...\n';
+        } else if (seconds >= 3) {
+          ambientText.innerText = `🧠 大模型结构化提炼与 Apple 日历验真 (${seconds}s)...`;
+          board.innerText = `⚡ [1/3] 微信显存窗口已捕获\n👁️ [2/3] 文字 OCR 解析完成\n🧠 [3/3] 正在调用大模型结构化提炼待办并验真 (${seconds}s)...\n`;
+        }
+      }, 1000);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+      try {
+        const url = force ? '/api/v1/rpa/inspect_current?force=true' : '/api/v1/rpa/inspect_current';
+        const res = await fetch(url, { method: 'POST', signal: controller.signal });
+        clearTimeout(timeoutId);
+        clearInterval(timer);
+
+        const data = await res.json();
+        
+        if (data.status === 'error') {
+          badge.innerText = '执行受阻';
+          ambientText.innerText = '⚠️ ' + data.message;
+          board.innerText += '⚠️ 提示: ' + data.message + '\n';
+          setNaiwaState('idle', '微信遇到小状况啦');
+          if (data.agent_briefing) renderAgentBriefingCard(data.agent_briefing, '执行受阻提示');
+          return;
+        }
+        if (data.status === 'warning') {
+          badge.innerText = '内容未就绪';
+          ambientText.innerText = '⚠️ ' + data.message;
+          board.innerText += '⚠️ 提示: ' + data.message + '\n';
+          setNaiwaState('idle', '内容未就绪');
+          if (data.agent_briefing) renderAgentBriefingCard(data.agent_briefing, '未就绪提示');
+          return;
+        }
+
+        if (data.is_watermark_unchanged) {
+          badge.innerText = '命中帧差缓存';
+          ambientText.innerText = '🟢 画面未变动，3ms 极速跳过重复提取';
+          setNaiwaState('idle', '已比对帧差：暂无新消息，安心自习！');
+        } else if (data.synced_to_apple > 0) {
+          badge.innerText = `同步 ${data.synced_to_apple} 项`;
+          ambientText.innerText = `🍏 已录入 ${data.synced_to_apple} 项待办至 Apple 提醒事项/日历`;
+          setNaiwaState('alert', '🚨 差点漏看这条 DDL！已录入日历！');
+        } else {
+          badge.innerText = '提取完成';
+          ambientText.innerText = '✓ 当前群巡视完成，暂无新 DDL';
+          setNaiwaState('idle', '抓取分析完成！');
+        }
+        
+        let outputText = "🎉 【当前群抓取完成！】\n\n";
+        if (data.raw_text_preview) {
+          outputText += "👁️ 【屏幕识别到的文字预览】:\n> " + data.raw_text_preview + "...\n\n";
+        }
+        if (data.summary) {
+          outputText += "🧠 【结构化结果】:\n" + data.summary + "\n\n";
+        }
+        outputText += "🍏 【Apple 系统同步】: 录入/确认 " + (data.synced_to_apple || 0) + " 条！已建立双向验真存根。";
+        
+        if (data.is_watermark_unchanged) {
+          outputText += "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n💡 提示：本群文字与上次完全一致。若想强制重新提炼，请点击右上角强制按钮。";
+        }
+        board.innerText = outputText;
+        loadSyncedItems();
+
+        if (data.agent_briefing) {
+          renderAgentBriefingCard(data.agent_briefing, force ? '当前群 (强制重析)' : '当前群快照');
+          const boardBtn = document.getElementById('boardSpeakBtn');
+          if (boardBtn && data.agent_briefing.spoken_script) {
+            boardBtn.setAttribute('data-speech', data.agent_briefing.spoken_script);
+            boardBtn.classList.remove('hidden');
+          }
+        }
+      } catch (err) {
+        clearInterval(timer);
+        clearTimeout(timeoutId);
+        badge.innerText = '超时或异常';
+        ambientText.innerText = '⚠️ 巡检请求超时或连接异常';
+        board.innerText += '⚠️ 异常: ' + err.message + '\n';
+        setNaiwaState('idle', '');
+      } finally {
+        clearInterval(timer);
+        clearTimeout(timeoutId);
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // ===== 巡检入口：全部订阅群漫游巡查 =====
+    async function triggerInspect(force = false) {
+      const btn = document.getElementById('inspectBtn');
+      const badge = document.getElementById('statusBadge');
+      const ambientText = document.getElementById('ambientStatusText');
+      const board = document.getElementById('resultsBoard');
+      const originalText = btn.innerHTML;
+
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+      btn.innerHTML = '<span>⏳ 巡航全群中...</span>';
+      badge.className = 'text-xs text-indigo-400 font-semibold animate-pulse';
+      setNaiwaState('scanning', '正在漫游巡视全部订阅群...');
+
+      let seconds = 0;
+      const timer = setInterval(() => {
+        seconds++;
+        badge.innerText = `全量巡航中 (${seconds}s)...`;
+        if (seconds === 1) {
+          ambientText.innerText = '⚡ CoreGraphics 定位微信会话栏...';
+          board.innerText = '⚡ [1/3] 正在通过 CoreGraphics 定位微信会话栏与订阅群...\n';
+        } else if (seconds <= 4) {
+          ambientText.innerText = `👁️ 视觉匹配首屏订阅群 (${seconds}s)...`;
+          board.innerText += `👁️ [2/3] 视觉匹配首屏订阅群 (${seconds}s)...\n`;
+        } else if (seconds <= 10) {
+          ambientText.innerText = `📜 静默滚动扫描更多订阅群 (${seconds}s)...`;
+          board.innerText += `📜 [2/3] 正在轻柔向下滑动扫描更多订阅群 (${seconds}s)...\n`;
+        } else {
+          ambientText.innerText = `🧠 提炼待办并同步至 Apple 日历 (${seconds}s)...`;
+          board.innerText = `🧠 [3/3] 正在提炼待办并同步至 Apple 日历 (${seconds}s)...\n`;
+        }
+      }, 1000);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+      try {
+        const url = force ? '/api/v1/rpa/inspect?force=true' : '/api/v1/rpa/inspect';
+        const res = await fetch(url, { method: 'POST', signal: controller.signal });
+        clearTimeout(timeoutId);
+        clearInterval(timer);
+
+        const data = await res.json();
+        
+        if (data.status === 'yielded') {
+          badge.innerText = '已主动让权';
+          ambientText.innerText = '🛡️ 检测到鼠标物理介入，已主动避让还权';
+          board.innerText = '🛡️ 【物理碰撞熔断机制生效】:\n' + data.message + '\n检测到您正在使用鼠标，系统已主动停止操作并将控制权还给您。';
+          setNaiwaState('idle', '已让权避让鼠标操作');
+          return;
+        }
+
+        if (data.status === 'error') {
+          badge.innerText = '巡检受阻';
+          ambientText.innerText = '⚠️ ' + data.message;
+          board.innerText = '⚠️ 提示: ' + data.message + '\n';
+          setNaiwaState('idle', '巡检受阻');
+          if (data.agent_briefing) renderAgentBriefingCard(data.agent_briefing, '巡检提示');
+          return;
+        }
+
+        badge.innerText = `完成 (录入 ${data.total_synced_todos || 0} 项)`;
+        ambientText.innerText = `🎉 巡查完成，成功巡检 ${data.inspected_count || 0} 个群，同步 ${data.total_synced_todos || 0} 项待办`;
+        if (data.total_synced_todos > 0) {
+          setNaiwaState('alert', `🚨 发现了 ${data.total_synced_todos} 条新 DDL！已同步！`);
+        } else {
+          setNaiwaState('idle', '巡查完毕，各群暂无急事！');
+        }
+        
+        let out = `🎉 【订阅群精准巡检完成！】\n`;
+        out += `📊 统计: 成功巡检 ${data.inspected_count || 0} 个订阅群，同步录入 Apple 系统 ${data.total_synced_todos || 0} 项待办！\n\n`;
+        
+        if (data.results && data.results.length > 0) {
+          data.results.forEach((r, idx) => {
+            const hitTag = r.is_watermark_unchanged ? " [🌊 命中高水位线去重]" : "";
+            out += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            out += `📌 【群 ${idx + 1}】: ${r.group_name}${hitTag} (同步 ${r.synced} 项待办):\n`;
+            if (r.summary) {
+              out += r.summary + `\n`;
+            }
+          });
+        }
+        
+        if (data.pending_not_found && data.pending_not_found.length > 0) {
+          out += `\n⏳ 【近 3 屏未浮上来的静默群】: ${data.pending_not_found.join(', ')}\n(提示：群内需有近期发言浮上会话列表时方可直接扫描)`;
+        }
+        
+        board.innerText = out;
+        loadConfig();
+        loadSyncedItems();
+
+        if (data.agent_briefing) {
+          renderAgentBriefingCard(data.agent_briefing, '全量订阅群巡检');
+          const boardBtn = document.getElementById('boardSpeakBtn');
+          if (boardBtn && data.agent_briefing.spoken_script) {
+            boardBtn.setAttribute('data-speech', data.agent_briefing.spoken_script);
+            boardBtn.classList.remove('hidden');
+          }
+        }
+      } catch (err) {
+        clearInterval(timer);
+        clearTimeout(timeoutId);
+        badge.innerText = '超时或异常';
+        ambientText.innerText = '⚠️ 巡检请求超时或网络等待过长';
+        board.innerText = '⚠️ 异常: ' + err.message + '\n';
+        setNaiwaState('idle', '');
+      } finally {
+        clearInterval(timer);
+        clearTimeout(timeoutId);
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // ===== Campus-Copilot (奶蛙) 对话引擎与工具联动 =====
+    let copilotHistory = [];
+
+    function handleCopilotKeyDown(e) {
+      if (e.key === 'Enter') {
+        sendCopilotMessage();
+      }
+    }
+
+    function sendQuickPrompt(promptText) {
+      document.getElementById('copilotInput').value = promptText;
+      sendCopilotMessage();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatMarkdown(text) {
+      if (!text) return "";
+      let html = escapeHtml(text);
+      html = html.replace(/###\s*(.*?)(<br\/>|\n|$)/g, '<div class="font-bold text-white text-xs md:text-sm mt-2 mb-1">$1</div>');
+      html = html.replace(/`(.*?)`/g, '<code class="bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-1 py-0.5 rounded text-[11px] font-mono">$1</code>');
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
+      html = html.replace(/\*(.*?)\*/g, '<em class="italic text-slate-300">$1</em>');
+      html = html.replace(/\n/g, '<br/>');
+      html = html.replace(/&gt;\s*(.*?)(<br\/>|$)/g, '<div class="border-l-2 border-indigo-400 pl-3 py-1 my-1.5 text-slate-300 bg-indigo-500/10 rounded-r text-xs leading-relaxed">$1</div>');
+      return html;
+    }
+
+    // ===== 智能学伴「奶蛙 (NaiWa)」语音引擎与音频波形 =====
+    // ===== 智能学伴「奶蛙 (NaiWa)」音频模块已停用 =====
+    window._BRIEFING_SCRIPTS = window._BRIEFING_SCRIPTS || {};
+    let isSpeaking = false;
+    let activeSpeakBtn = null;
+
+    async function playVoiceBriefing(btn, textOverride = null) {
+      console.log("音频模块已按设置停用 (Muted)");
+      return;
+    }
+
+    function fallbackSpeechSynth(text) {
+      return;
+    }
+
+    // 渲染 Meta Muse 生成式简报卡片 (Generative Briefing Surface)
+    function renderAgentBriefingCard(briefing, sourceTitle) {
+      if (!briefing) return;
+      const chatBox = document.getElementById('copilotChatBox');
+      const btnId = 'speak-btn-' + Date.now();
+      const scriptKey = 'brief_' + Date.now();
+      window._BRIEFING_SCRIPTS[scriptKey] = briefing.spoken_script || '';
+      window._BRIEFING_SCRIPTS[btnId] = briefing.spoken_script || '';
+      
+      const cardHtml = `
+        <div class="flex items-start gap-3.5 animate-fadeIn">
+          <div class="w-9 h-9 rounded-2xl bg-amber-500/20 border border-amber-500/30 p-1 shrink-0 flex items-center justify-center shadow-lg overflow-hidden">
+            <img src="/static/naiwa_sticker.png" class="w-full h-full object-contain">
+          </div>
+          <div class="muse-glass-subtle border border-amber-500/30 rounded-2xl rounded-tl-sm p-4 text-slate-200 text-xs md:text-sm leading-relaxed max-w-[90%] shadow-lg space-y-3">
+            
+            <div class="flex items-center justify-between pb-2 border-b border-amber-500/20">
+              <span class="font-bold text-white flex items-center gap-2">
+                <span>🐸</span>
+                <span>巡查简报 · ${escapeHtml(sourceTitle)}</span>
+              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">📋 简报直达</span>
+              </div>
+            </div>
+            
+            <div class="space-y-1.5 leading-relaxed text-slate-300">
+              ${formatMarkdown(briefing.markdown)}
+            </div>
+
+          </div>
+        </div>
+      `;
+      chatBox.innerHTML += cardHtml;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function sendCopilotMessage() {
+      const inputEl = document.getElementById('copilotInput');
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      const chatBox = document.getElementById('copilotChatBox');
+      const sendBtn = document.getElementById('copilotSendBtn');
+
+      // 1. 渲染用户消息
+      chatBox.innerHTML += `
+        <div class="flex items-start justify-end gap-3 animate-fadeIn">
+          <div class="bg-indigo-600 text-white rounded-2xl rounded-tr-sm p-3.5 text-xs md:text-sm leading-relaxed max-w-[85%] shadow-md">
+            ${escapeHtml(text)}
+          </div>
+          <div class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 border border-white/10 flex items-center justify-center shrink-0 text-xs font-bold">我</div>
+        </div>
+      `;
+      inputEl.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      // 2. 渲染加载中指示器
+      const loadingId = 'loading-' + Date.now();
+      chatBox.innerHTML += `
+        <div id="${loadingId}" class="flex items-start gap-3.5">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 p-1 shrink-0 flex items-center justify-center overflow-hidden">
+            <img src="/static/naiwa_sticker.png" class="w-full h-full object-contain">
+          </div>
+          <div class="muse-glass-subtle rounded-2xl rounded-tl-sm p-3.5 text-slate-400 text-xs flex items-center gap-2 border border-white/5">
+            <span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            <span>奶蛙正在分析校园动态与日历待办... 吧哈哈</span>
+          </div>
+        </div>
+      `;
+      chatBox.scrollTop = chatBox.scrollHeight;
+      sendBtn.disabled = true;
+      sendBtn.classList.add('opacity-50');
+      setNaiwaState('scanning', '本蛙正在分析校园待办...');
+
+      try {
+        const res = await fetch('/api/v1/copilot/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            history: copilotHistory
+          })
+        });
+        const data = await res.json();
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+
+        // 工具调用可视化徽章
+        let toolsBadgeHtml = '';
+        if (data.tools_called && data.tools_called.length > 0) {
+          const nameMap = {
+            "query_upcoming_schedule": "🔍 检索苹果日历待办",
+            "inspect_current_wechat_screen": "👁️ 微信屏幕原生OCR",
+            "roam_and_inspect_subscribed_groups": "⚡ 巡航已订阅群",
+            "add_schedule_item": "✍️ 写入Apple待办",
+            "list_monitored_campus_groups": "📋 读取监控群列表"
+          };
+          const toolNames = data.tools_called.map(t => nameMap[t.tool] || `🔧 ${t.tool}`).join(' · ');
+          toolsBadgeHtml = `<div class="mb-2"><span class="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] px-2.5 py-1 rounded-full font-bold">⚡ 端侧感知工具: ${toolNames}</span></div>`;
+        }
+
+        const replyHtml = formatMarkdown(data.reply);
+
+        chatBox.innerHTML += `
+          <div class="flex items-start gap-3.5 animate-fadeIn">
+            <div class="w-9 h-9 rounded-2xl bg-amber-500/20 border border-amber-500/30 p-1 shrink-0 flex items-center justify-center overflow-hidden">
+              <img src="/static/naiwa_sticker.png" class="w-full h-full object-contain">
+            </div>
+            <div class="muse-glass-subtle rounded-2xl rounded-tl-sm p-4 text-slate-200 text-xs md:text-sm leading-relaxed max-w-[88%] border border-white/5 space-y-2">
+              ${toolsBadgeHtml}
+              <div>${replyHtml}</div>
+              <div class="text-[10px] text-slate-500 text-right mt-1 font-mono">${data.timestamp || ''}</div>
+            </div>
+          </div>
+        `;
+
+        setNaiwaState('idle', '');
+
+        // 维护会话上下文
+        copilotHistory.push({ role: 'user', content: text });
+        copilotHistory.push({ role: 'assistant', content: data.reply });
+
+        // 联动刷新存根与配置
+        loadSyncedItems();
+        loadConfig();
+
+      } catch (err) {
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+
+        setNaiwaState('idle', '');
+
+        chatBox.innerHTML += `
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0 text-xs font-bold">!</div>
+            <div class="muse-glass-subtle rounded-2xl rounded-tl-sm p-3.5 text-rose-300 text-xs border border-rose-500/30">
+              连接奶蛙学伴出现异常：${escapeHtml(err.message)}
+            </div>
+          </div>
+        `;
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.classList.remove('opacity-50');
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    }
+
+    // ===== 后台定时守护巡检与高危 DDL 预警中心交互逻辑 =====
+    let daemonPollTimer = null;
+
+    async function loadDaemonStatus() {
+      try {
+        const res = await fetch('/api/v1/daemon/status');
+        const data = await res.json();
+        
+        // 1. 更新顶部 Badge
+        const badge = document.getElementById('daemonStatusBadge');
+        if (badge) {
+          if (!data.is_enabled) {
+            badge.className = 'text-[10px] bg-slate-500/20 text-slate-400 px-2 py-0.5 rounded-full font-mono';
+            badge.innerText = '⏸️ 已暂停';
+          } else if (data.is_patrolling) {
+            badge.className = 'text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-mono animate-pulse';
+            badge.innerText = '⚡ 巡查中';
+          } else if (data.is_user_active) {
+            badge.className = 'text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-mono';
+            badge.innerText = '🟡 智能避让';
+          } else {
+            badge.className = 'text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-mono';
+            badge.innerText = '🟢 守护中';
+          }
+        }
+
+        // 2. 更新开关与周期选择
+        const toggle = document.getElementById('daemonEnableToggle');
+        if (toggle) toggle.checked = !!data.is_enabled;
+        const toggleText = document.getElementById('daemonToggleText');
+        if (toggleText) toggleText.innerText = data.is_enabled ? '自动守护中' : '守护已暂停';
+
+        const intervalSel = document.getElementById('daemonIntervalSelect');
+        if (intervalSel) intervalSel.value = String(data.interval_minutes);
+
+        // 3. 更新卡片 1：运行态势
+        const stateTitle = document.getElementById('daemonStateTitle');
+        const modePill = document.getElementById('daemonModePill');
+        if (stateTitle && modePill) {
+          if (!data.is_enabled) {
+            stateTitle.innerHTML = '<span class="text-slate-400">⏸️ 守护已暂停</span>';
+            modePill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/30';
+            modePill.innerText = '已暂停';
+          } else if (data.is_patrolling) {
+            stateTitle.innerHTML = '<span class="text-indigo-300 animate-pulse">⚡ 正在漫游巡查群聊...</span>';
+            modePill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 border border-indigo-500/30';
+            modePill.innerText = '巡查中';
+          } else if (data.is_user_active) {
+            stateTitle.innerHTML = '<span class="text-amber-300">🟡 用户活跃中，主动挂起避让</span>';
+            modePill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30';
+            modePill.innerText = '智能避让';
+          } else {
+            stateTitle.innerHTML = '<span class="text-emerald-300">🟢 静默就绪 (离席自动巡检)</span>';
+            modePill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30';
+            modePill.innerText = '正常守护';
+          }
+        }
+
+        const nextEta = document.getElementById('daemonNextEta');
+        if (nextEta) nextEta.innerText = data.next_run_eta || '计算中...';
+        const lastInspected = document.getElementById('daemonLastInspected');
+        if (lastInspected) lastInspected.innerText = data.last_inspected_at || '尚未执行';
+
+        // 4. 更新卡片 2：空闲仪表盘
+        const idleSecsEl = document.getElementById('daemonIdleSecs');
+        if (idleSecsEl) idleSecsEl.innerText = data.current_idle_seconds;
+        const idleBar = document.getElementById('daemonIdleBar');
+        if (idleBar) {
+          const pct = Math.min(100, Math.max(5, (data.current_idle_seconds / 45.0) * 100));
+          idleBar.style.width = `${pct}%`;
+          if (data.current_idle_seconds >= 45.0) {
+            idleBar.className = 'bg-emerald-500 h-full transition-all duration-300';
+          } else {
+            idleBar.className = 'bg-amber-500 h-full transition-all duration-300';
+          }
+        }
+        const idleNote = document.getElementById('daemonIdleNote');
+        if (idleNote) {
+          if (data.current_idle_seconds >= 45.0) {
+            idleNote.innerHTML = '<span class="text-emerald-400">✓ 已达离席阈值 (45s)，满足条件时将启动无感静默扫描</span>';
+          } else {
+            idleNote.innerHTML = `<span class="text-amber-400">⏳ 用户活跃操作中，差 ${(45.0 - data.current_idle_seconds).toFixed(1)}s 达到安全阈值</span>`;
+          }
+        }
+
+        // 5. 渲染高危 DDL 预警流水表
+        const urgentList = document.getElementById('urgentAlertsList');
+        if (urgentList) {
+          const history = data.urgent_alerts_history || [];
+          if (history.length === 0) {
+            urgentList.innerHTML = `
+              <div class="text-center py-6 text-slate-500 text-xs muse-glass-subtle rounded-2xl border border-white/5">
+                暂无高危 DDL 预警记录，当发现 24 小时内临近截止的大作业、实验或考试时，将在此留存声光报警流水。
+              </div>`;
+          } else {
+            urgentList.innerHTML = history.map(item => `
+              <div class="muse-glass-subtle p-3 rounded-2xl border border-rose-500/20 bg-rose-950/10 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-bold text-white">${escapeHtml(item.title)}</span>
+                    <span class="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] px-2 py-0.5 rounded-full font-bold">🚨 ${escapeHtml(item.urgent_reason || '高危预警')}</span>
+                    <span class="text-slate-400 text-[10px]">${escapeHtml(item.group_name)}</span>
+                  </div>
+                  <div class="text-slate-400 text-[11px] flex items-center gap-2">
+                    <span>⏰ 截止: <strong class="text-rose-300 font-mono">${escapeHtml(item.due_datetime)}</strong></span>
+                    <span>·</span>
+                    <span class="text-emerald-300">🔊 macOS 原生横幅 + 硬件扬声器已触发</span>
+                  </div>
+                </div>
+                <div class="text-[10px] text-slate-500 font-mono shrink-0">${escapeHtml(item.timestamp)}</div>
+              </div>
+            `).join('');
+          }
+        }
+
+      } catch (e) {
+        console.error("读取守护状态异常", e);
+      }
+    }
+
+    async function toggleDaemonState(enabled) {
+      try {
+        await fetch('/api/v1/daemon/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: enabled })
+        });
+        loadDaemonStatus();
+      } catch (e) {
+        alert("切换守护状态失败: " + e.message);
+      }
+    }
+
+    async function changeDaemonInterval(minutes) {
+      try {
+        await fetch('/api/v1/daemon/interval', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ interval_minutes: parseInt(minutes) })
+        });
+        loadDaemonStatus();
+      } catch (e) {
+        alert("修改巡检周期失败: " + e.message);
+      }
+    }
+
+    async function triggerDaemonPatrolNow() {
+      const btn = document.getElementById('daemonPatrolBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ 正在静默巡检中...</span>';
+      setNaiwaState('scanning', '本蛙正在为你执行守护巡查！');
+      try {
+        const res = await fetch('/api/v1/daemon/trigger?force=true', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || "巡查完成！");
+        loadDaemonStatus();
+        loadSyncedItems();
+      } catch (e) {
+        alert("巡检异常: " + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>⚡ 立即执行一次守护巡检</span>';
+        setNaiwaState('idle', '');
+      }
+    }
+
+    async function testDaemonUrgentAlert() {
+      const btn = document.getElementById('daemonAlertBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="animate-pulse">🚨 横幅预警触发中...</span>';
+      setNaiwaState('alert', '🚨 发现高危 DDL！快去交作业！');
+      try {
+        const res = await fetch('/api/v1/daemon/test_alert', { method: 'POST' });
+        const data = await res.json();
+        loadDaemonStatus();
+      } catch (e) {
+        alert("预警触发异常: " + e.message);
+      } finally {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = '<span>🚨 模拟高危 DDL 预警 (系统横幅通知)</span>';
+          setNaiwaState('idle', '');
+        }, 1500);
+      }
+    }
+
+    // ===== macOS 顶部状态栏常驻胶囊控制 =====
+    let isMenuBarRunning = false;
+
+    async function loadMenuBarStatus() {
+      try {
+        const res = await fetch('/api/v1/menubar/status');
+        const data = await res.json();
+        isMenuBarRunning = !!data.running;
+
+        const pill = document.getElementById('menuBarStatusPill');
+        const title = document.getElementById('menuBarStateTitle');
+        const headerBtn = document.getElementById('headerMenuBarBtn');
+        const headerText = document.getElementById('headerMenuBarText');
+
+        if (isMenuBarRunning) {
+          if (pill) {
+            pill.className = "text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30";
+            pill.textContent = `🟢 常驻中 (PID: ${data.pid})`;
+          }
+          if (title) {
+            title.innerHTML = '<span>🍏 顶部微面板 (常驻中)</span>';
+          }
+          if (headerBtn) {
+            headerBtn.className = "flex items-center gap-1.5 text-xs bg-emerald-500/20 text-emerald-200 border border-emerald-500/50 px-3.5 py-1.5 rounded-xl font-semibold transition active:scale-95 shadow-sm";
+          }
+          if (headerText) {
+            headerText.textContent = `常驻中 (PID: ${data.pid})`;
+          }
+        } else {
+          if (pill) {
+            pill.className = "text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/10";
+            pill.textContent = "⚪ 未运行";
+          }
+          if (title) {
+            title.innerHTML = '<span>🍏 顶部微面板</span>';
+          }
+          if (headerBtn) {
+            headerBtn.className = "flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-white/10 px-3.5 py-1.5 rounded-xl font-semibold transition active:scale-95 shadow-sm";
+          }
+          if (headerText) {
+            headerText.textContent = "启动菜单栏常驻";
+          }
+        }
+      } catch (e) {
+        console.error("读取状态栏胶囊异常", e);
+      }
+    }
+
+    async function startMenuBarApp() {
+      const btn = document.getElementById('startMenuBarBtn');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/v1/menubar/start', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || "状态栏常驻胶囊已启动！请查看 Mac 顶部菜单栏 🐸。");
+        loadMenuBarStatus();
+      } catch (e) {
+        alert("启动菜单栏胶囊异常: " + e.message);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function stopMenuBarApp() {
+      const btn = document.getElementById('stopMenuBarBtn');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/v1/menubar/stop', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || "状态栏胶囊已停止。");
+        loadMenuBarStatus();
+      } catch (e) {
+        alert("停止菜单栏胶囊异常: " + e.message);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function toggleMenuBarFromHeader() {
+      if (isMenuBarRunning) {
+        if (confirm("当前奶蛙状态栏胶囊正在 Mac 顶部常驻运行，是否停止并退出？")) {
+          await stopMenuBarApp();
+        }
+      } else {
+        await startMenuBarApp();
+      }
+    }
+
+    loadConfig();
+    loadSyncedItems();
+    loadDaemonStatus();
+    loadMenuBarStatus();
+    daemonPollTimer = setInterval(() => {
+      loadDaemonStatus();
+      loadMenuBarStatus();
+    }, 5000);
+  </script>
+</body>
+</html>
