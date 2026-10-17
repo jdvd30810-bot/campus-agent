@@ -17,7 +17,7 @@ class TodoItem(BaseModel):
     action_item: str = Field("", description="具体需要完成的行动描述")
     is_calendar_event: bool = Field(False, description="是否是具体时间段活动（如开会、讲座、考试），适合写入日历")
     category: str = Field("course", description="待办分类：course(课程作业/考试) | admin(班级行政/问卷/事务) | activity(社团活动/讲座/日常)")
-    speaker: Optional[str] = Field(None, description="发布者姓名或头衔，如'谢雨岑老师'、'班长'")
+    speaker: Optional[str] = Field(None, description="发布者姓名或头衔，如'主讲老师'、'班长'")
     is_trusted_speaker: bool = Field(False, description="是否经过群置信发言人白名单验证")
     source_group: Optional[str] = Field(None, description="来源群聊名称")
     confidence: float = Field(0.95, description="置信度打分 (0.0 - 1.0)")

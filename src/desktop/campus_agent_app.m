@@ -63,8 +63,22 @@
         return cwd;
     }
     
-    // 4. 兜底默认路径
-    return @"/Users/kangyuchou/.gemini/antigravity/scratch/campus-agent";
+    // 4. 用户家目录下通用寻找 (~/.campus-agent 或 ~/campus-agent 等)
+    NSString *home = NSHomeDirectory();
+    NSArray *candidates = @[
+        [home stringByAppendingPathComponent:@".campus-agent"],
+        [home stringByAppendingPathComponent:@"campus-agent"],
+        [home stringByAppendingPathComponent:@"Desktop/campus-agent"],
+        [home stringByAppendingPathComponent:@"Documents/campus-agent"],
+        [home stringByAppendingPathComponent:@".gemini/antigravity/scratch/campus-agent"]
+    ];
+    for (NSString *cand in candidates) {
+        if ([fm fileExistsAtPath:[cand stringByAppendingPathComponent:@"app/main.py"]]) {
+            return cand;
+        }
+    }
+    
+    return cwd;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {

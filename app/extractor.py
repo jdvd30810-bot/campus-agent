@@ -24,7 +24,7 @@ SYSTEM_PROMPT = """你是一个专门为中国大学生打造的校园消息聚�
    - "admin": 班级团支部通知、学院行政、综测评奖、问卷调查、宿舍检查、放假调课
    - "activity": 俱乐部纳新、学术讲座、志愿活动、文艺体育、宣讲会
 6. 发言人画像识别（speaker profiling）：
-   - 提取该消息的发送人昵称或身份（如"教师 谢雨岑"、"辅导员"、"班长"）。
+   - 提取该消息的发送人昵称或身份（如"张老师"、"辅导员"、"班长"）。
    - 如果发送人属于用户指定的「可信发言人白名单」或具有明显官方教师/辅导员特征，将 is_trusted_speaker 设为 true，并赋予 priority: "HIGH"。
 7. 区分类型：如果是固定时段参加的活动（讲座、开会、考试），设置 is_calendar_event: true；如果是截止提交某物的 DDL（交作业、填表），设置 is_calendar_event: false。
 8. 如果消息里没有任何有效信息（全是闲聊或收到），将 has_actionable_items 设为 false。
@@ -42,7 +42,7 @@ SYSTEM_PROMPT = """你是一个专门为中国大学生打造的校园消息聚�
       "action_item": "具体要做的事情详情",
       "is_calendar_event": false,
       "category": "course",
-      "speaker": "发布人姓名或头衔，如'教师 谢雨岑'",
+      "speaker": "发布人姓名或头衔，如'张老师'",
       "is_trusted_speaker": true
     }
   ],

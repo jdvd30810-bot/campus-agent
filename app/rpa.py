@@ -168,7 +168,7 @@ def match_subscribed_group(group_name: str, sidebar_items: List[Dict[str, Any]])
         if any(k in text for k in SEARCH_UI_BLACKLIST):
             continue
 
-        # 4. 核心特征词精准命中 (如: 德法、形势、通用英语、水心、线性代数)
+        # 4. 核心特征词精准命中 (如: 高等数学、计算机、英语、操作系统、班级群)
         if core_words and any(cw in text for cw in core_words):
             return it
 

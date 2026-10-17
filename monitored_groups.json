@@ -1,73 +1,65 @@
 {
   "interval_minutes": 30,
-  "last_inspected_at": "2026-10-17 19:08:22",
+  "last_inspected_at": "2026-10-17 19:20:27",
   "groups": [
     {
-      "name": "26秋 通用英语C",
+      "name": "高等数学(A)课程答疑群",
       "enabled": true,
       "category": "course",
       "trusted_speakers": [
-        "谢雨岑",
-        "谢老师",
-        "学委"
-      ]
-    },
-    {
-      "name": "水心3-3群",
-      "enabled": true,
-      "category": "admin",
-      "trusted_speakers": [
-        "宿管",
-        "辅导员",
-        "楼长"
-      ]
-    },
-    {
-      "name": "26计算机本8",
-      "enabled": true,
-      "category": "admin",
-      "trusted_speakers": [
-        "辅导员",
-        "班长",
-        "团支书"
-      ]
-    },
-    {
-      "name": "26计算机类本8通知群",
-      "enabled": true,
-      "category": "admin",
-      "trusted_speakers": [
-        "教学秘书",
-        "辅导员",
-        "教务处"
-      ]
-    },
-    {
-      "name": "德法26计算机7-8班",
-      "enabled": true,
-      "category": "course",
-      "trusted_speakers": [
-        "老师",
+        "张老师",
         "助教",
         "学委"
       ]
     },
     {
-      "name": "26秋线性代数26计本678",
-      "enabled": true,
-      "category": "course",
-      "trusted_speakers": [
-        "任课老师",
-        "助教"
-      ]
-    },
-    {
-      "name": "26秋形策计算机本678",
+      "name": "计算机系统大作业指导群",
       "enabled": true,
       "category": "course",
       "trusted_speakers": [
         "主讲教师",
-        "课代表"
+        "课代表",
+        "助教"
+      ]
+    },
+    {
+      "name": "大学英语与学术写作群",
+      "enabled": true,
+      "category": "course",
+      "trusted_speakers": [
+        "任课教师",
+        "助教",
+        "学委"
+      ]
+    },
+    {
+      "name": "2026级计算机学院通知大群",
+      "enabled": true,
+      "category": "admin",
+      "trusted_speakers": [
+        "辅导员",
+        "班长",
+        "教学秘书"
+      ]
+    },
+    {
+      "name": "学生宿舍自律与安全管理群",
+      "enabled": true,
+      "category": "admin",
+      "trusted_speakers": [
+        "宿管",
+        "楼长",
+        "生活委员"
+      ]
+    },
+    {
+      "name": "青年志愿者与社团活动大群",
+      "enabled": true,
+      "category": "club",
+      "trusted_speakers": [
+        "社长",
+        "团支书",
+        "活动负责人"
       ]
     }
   ],

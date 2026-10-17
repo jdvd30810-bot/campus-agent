@@ -250,6 +250,10 @@
       <!-- 右侧：全局控制与模式切换 -->
       <div class="flex items-center gap-3">
 
+        <!-- 新手使用说明书按钮 -->
+        <button type="button" onclick="openUserManualModal()" class="flex items-center gap-1.5 text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3.5 py-1.5 rounded-xl font-semibold transition active:scale-95 shadow-sm" title="查看新手使用指南与说明书">
+          <span>📖 使用说明</span>
+        </button>
 
         <!-- 独立动态剧场入口 -->
         <a href="/naiwa" target="_blank" class="flex items-center gap-1.5 text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3.5 py-1.5 rounded-xl font-semibold transition active:scale-95 shadow-sm" title="打开全屏奶蛙活体动效剧场">
@@ -836,6 +840,128 @@
         <button type="button" onclick="closeGroupRuleModal()" class="px-5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition">取消</button>
         <button type="button" onclick="saveGroupRuleFromModal()" id="modalSaveRuleBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2 rounded-xl text-xs md:text-sm shadow-lg shadow-indigo-600/30 transition active:scale-95 flex items-center gap-2">
           <span>💾 保存画像规则</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== 📖 Campus-Agent 新手使用指南与操作说明书弹窗 (User Manual Modal) ===== -->
+  <div id="userManualModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden transition-opacity duration-200" onclick="if(event.target===this)closeUserManualModal()">
+    <div class="muse-glass rounded-3xl border border-white/10 w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-2xl relative text-left">
+      
+      <!-- 弹窗顶栏 -->
+      <div class="flex items-start justify-between border-b border-white/10 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400/20 to-emerald-400/20 border border-amber-500/30 flex items-center justify-center text-2xl shadow-inner">
+            📖
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base md:text-xl font-bold text-white tracking-wide">Campus-Agent 校园智能助手 · 使用说明书</h3>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                新手极速入门
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">专为高校学生打造的非侵入式环境智能 (Ambient Intelligence) 具身助教系统</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeUserManualModal()" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-white/10 transition" title="关闭">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- 四步极速上手指南卡片流 -->
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+          <span>🚀</span><span>四步搞定日常待办自动同步</span>
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+            <div class="flex items-center gap-2 font-bold text-emerald-400">
+              <span class="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-[11px]">1</span>
+              <span>勾选关注课程群 / 行政群</span>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              在主控制台中，直接勾选你想纳管的课程大作业群、年级大群或班级群。点击卡片右下角<b>「规则画像配置」</b>，还能精准指定老师与学委为置信发言人，彻底屏蔽同学闲聊噪音。
+            </p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+            <div class="flex items-center gap-2 font-bold text-blue-400">
+              <span class="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-[11px]">2</span>
+              <span>微信后台静默常驻，无需手动干预</span>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              让微信在后台运行即可！本系统独创<b>外设空闲感知避让</b>机制：仅在检测到你<b>停止敲键盘/鼠标 45 秒以上</b>时，才会在后台自动巡视。你在打代码或打游戏时，系统<b>100% 主动让出</b>，绝不抢鼠标！
+            </p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+            <div class="flex items-center gap-2 font-bold text-purple-400">
+              <span class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[11px]">3</span>
+              <span>多时间实体锚定与智能归类</span>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              大模型大脑自动结合系统物理时间，把口语化的“本周五晚5点”、“后天上午”精准推算为绝对日期；交作业自动生成为<b>Apple 提醒事项</b>，考试与会议讲座自动规划为<b>Apple 日历</b>时段。
+            </p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+            <div class="flex items-center gap-2 font-bold text-amber-400">
+              <span class="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-[11px]">4</span>
+              <span>iCloud 广播触达与高危预警</span>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              待办写入 Mac 的瞬间，通过 iCloud 无感同步至你的 <b>iPhone 锁屏与 Apple Watch 震动</b>。临近 24h 截止的高危作业，Mac 状态栏胶囊与系统横幅会静默重点预警，告别期末 DDL 焦虑！
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 三大安心守护承诺 -->
+      <div class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 space-y-2 text-xs">
+        <h4 class="font-bold text-indigo-300 flex items-center gap-2">
+          <span>🛡️</span><span>三大安心守护原则：安全 · 隐私 · 零打扰</span>
+        </h4>
+        <ul class="space-y-1.5 text-slate-300">
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-400">✓</span>
+            <span><b>0 封号风险</b>：纯视觉 OCR 模拟人类肉眼识读，不注入微信进程内存、不修改底层封包，绝对安全合规。</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-400">✓</span>
+            <span><b>严格隐私保护</b>：仅巡视用户主动勾选授权的群聊，私人聊天与未勾选群 100% 旁路绕过；支持本地离线开源小模型。</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-400">✓</span>
+            <span><b>轻量静默运行</b>：已全量移除机械声音，界面无新变化时 64 位图像差异哈希（1.29ms）瞬间跳过，不发热、零干扰。</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 快捷操作与快捷键提示 -->
+      <div class="flex flex-wrap items-center justify-between text-[11px] text-slate-400 bg-white/5 p-3 rounded-xl border border-white/10 gap-2">
+        <div class="flex items-center gap-2">
+          <span>💡 <b>常用快捷键</b>：</span>
+          <kbd class="px-1.5 py-0.5 bg-slate-800 rounded border border-white/10 font-mono text-white">Cmd + I</kbd> 立即巡检
+          <kbd class="px-1.5 py-0.5 bg-slate-800 rounded border border-white/10 font-mono text-white">Cmd + R</kbd> 刷新看板
+          <kbd class="px-1.5 py-0.5 bg-slate-800 rounded border border-white/10 font-mono text-white">Cmd + W</kbd> 隐藏至后台
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
+            <input type="checkbox" id="dontShowManualAgainCheckbox" class="w-3.5 h-3.5 rounded bg-slate-900 border-white/20 text-indigo-500 focus:ring-0">
+            <span>下次启动不再自动弹出</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 底部动作条 -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button" onclick="closeUserManualModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-7 py-2.5 rounded-xl text-xs md:text-sm shadow-lg shadow-indigo-600/30 transition active:scale-95 flex items-center gap-2">
+          <span>✨ 我知道了，开始使用</span>
         </button>
       </div>
 
@@ -2017,10 +2143,39 @@
       }
     }
 
+    // ===== 新手使用说明书弹窗控制 =====
+    function openUserManualModal() {
+      const modal = document.getElementById('userManualModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeUserManualModal() {
+      const modal = document.getElementById('userManualModal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+      const chk = document.getElementById('dontShowManualAgainCheckbox');
+      if (chk && chk.checked) {
+        localStorage.setItem('campus_agent_manual_dismissed', 'true');
+      }
+    }
+
+    function checkAndShowUserManualOnLaunch() {
+      const isDismissed = localStorage.getItem('campus_agent_manual_dismissed');
+      if (!isDismissed) {
+        setTimeout(() => {
+          openUserManualModal();
+        }, 500);
+      }
+    }
+
     loadConfig();
     loadSyncedItems();
     loadDaemonStatus();
     loadMenuBarStatus();
+    checkAndShowUserManualOnLaunch();
     daemonPollTimer = setInterval(() => {
       loadDaemonStatus();
       loadMenuBarStatus();
