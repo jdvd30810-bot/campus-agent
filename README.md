@@ -160,8 +160,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 服务启动后，可在原生桌面视窗或浏览器中访问以下地址：
 
 * 🖥️ **原生 macOS 桌面视窗**: 启动 `bin/CampusAgent.app`，Dock 栏常驻，随开随关
-* 🎛️ **Meta Muse 主控制台**: [http://127.0.0.1:8000/dashboard](http://127.0.0.1:8000/dashboard)
-* 🐸 **动效大剧场与桌宠视窗**: [http://127.0.0.1:8000/naiwa](http://127.0.0.1:8000/naiwa)
+* 🎛️  主控制台**: [http://127.0.0.1:8000/dashboard](http://127.0.0.1:8000/dashboard)
+
 * 📑 **FastAPI 交互式接口文档 (Swagger UI)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 * 💊 **顶部状态栏胶囊遥测**: [http://127.0.0.1:8000/api/v1/menubar/status](http://127.0.0.1:8000/api/v1/menubar/status)
 * ⏰ **后台守护巡检遥测**: [http://127.0.0.1:8000/api/v1/daemon/status](http://127.0.0.1:8000/api/v1/daemon/status)
