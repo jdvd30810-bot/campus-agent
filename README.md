@@ -42,7 +42,7 @@
 | **人机协同避让** | **CGEventPostToPid + 外设空闲感知** | 物理硬件光标位移严格为 **0.0000 px**，仅在用户物理空闲 45s 以上后台执行，人类操作瞬时主动让权 |
 | **苹果原生生态打通**| **AppleScript / EventKit** | 双向回读写入 macOS 原生 Reminders / Calendar，并通过 iCloud 毫秒级广播至 iPhone 与 Apple Watch |
 | **系统状态栏常驻** | **Objective-C Cocoa (`LSUIElement=1`)** | 原生手写 macOS 顶部状态栏胶囊（体积仅 80KB），适配 MacBook 刘海屏实时呈现高危 DDL 统计 |
-| **前台管理看板** | **Meta Muse 现代玻璃态前端** | 响应式看板、群规则白名单/黑名单动态配置、待办事项卡片流 |
+| **前台管理看板** | ** 现代玻璃态前端** | 响应式看板、群规则白名单/黑名单动态配置、待办事项卡片流 |
 | **通用工具协议** | **Anthropic MCP (Model Context Protocol)** | 支持作为标准外部 Tool 被 Claude Desktop、Cursor 等大模型智能体插拔调用 |
 
 ---
