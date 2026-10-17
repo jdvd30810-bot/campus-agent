@@ -163,6 +163,52 @@ class CampusDaemonScheduler:
         }
         return self.trigger_urgent_ddl_alert([mock_urgent_todo], group_name="2026系统结构核心课程群")
 
+    def cleanup_expired_ddls(self, hours_past: float = 0.0) -> Dict[str, Any]:
+        """
+        全面清理已过期的 DDL 与事项：
+        1. 本地数据库归档过期记录；
+        2. 调度器过滤清理内部的高危告警历史 (urgent_alerts_history)；
+        3. 调用 AppleScript 自动将 Apple Reminders 中已逾期事项标记为已完成 (Completed) 归档。
+        """
+        from app.database import cleanup_expired_synced_items
+        from app.apple_sync import cleanup_expired_apple_reminders
+
+        # 1. 数据库归档
+        db_cleaned = cleanup_expired_synced_items(hours_threshold=hours_past)
+
+        # 2. Apple Reminders 归档
+        apple_cleaned = cleanup_expired_apple_reminders(hours_past=hours_past)
+
+        # 3. 清理调度器高危告警历史中的已过期条目 (逾期超过 6 小时即不再告警)
+        now = datetime.now()
+        fresh_alerts = []
+        for alert in self.urgent_alerts_history:
+            due_str = alert.get("due_datetime", "")
+            keep = True
+            if due_str:
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+                    try:
+                        dt = datetime.strptime(due_str.strip(), fmt)
+                        diff_hours = (now - dt).total_seconds() / 3600.0
+                        if diff_hours > 6.0:  # 超过 6 小时已彻底过期的不再显示在紧急预警
+                            keep = False
+                        break
+                    except Exception:
+                        continue
+            if keep:
+                fresh_alerts.append(alert)
+        alerts_cleaned = len(self.urgent_alerts_history) - len(fresh_alerts)
+        self.urgent_alerts_history = fresh_alerts
+
+        logger.info(f"🧹 [全量巡查清理] 本地数据库归档 {db_cleaned} 条，Apple Reminders 归档 {apple_cleaned} 条，紧急预警过期清理 {alerts_cleaned} 条")
+        return {
+            "status": "success",
+            "db_cleaned": db_cleaned,
+            "apple_cleaned": apple_cleaned,
+            "alerts_cleaned": alerts_cleaned,
+            "total_cleaned": db_cleaned + apple_cleaned + alerts_cleaned
+        }
+
     def patrol_cycle(self, force: bool = False) -> Dict[str, Any]:
         """
         执行一轮智能守护巡查：
@@ -216,6 +262,12 @@ class CampusDaemonScheduler:
         logger.info(f"⚡ [守护巡查启动] 用户物理空闲 {idle_secs:.1f}s，开始后台静默巡检...")
 
         try:
+            # 自动联动清理过期待办与过期预警历史
+            try:
+                self.cleanup_expired_ddls()
+            except Exception as clean_err:
+                logger.warning(f"巡查前置自动清理异常: {clean_err}")
+
             from app.rpa import execute_batch_inspection
             res = execute_batch_inspection(max_scroll_pages=2, force=force)
             

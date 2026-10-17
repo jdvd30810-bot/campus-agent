@@ -245,10 +245,26 @@ def api_trigger_inspect_current(force: bool = False):
     return inspect_current_active_chat(force=force)
 
 @app.get("/api/v1/synced_items")
-def api_get_synced_items():
+def api_get_synced_items(include_expired: bool = False):
     """获取所有已验真回执的待办与日程列表 (Bi-directional Receipts)"""
     from app.database import get_recent_synced_items
-    return get_recent_synced_items(limit=30)
+    return get_recent_synced_items(limit=30, include_expired=include_expired)
+
+@app.post("/api/v1/todos/cleanup_expired")
+def api_cleanup_expired_todos(hours_past: float = 0.0):
+    """
+    一键清理过期待办与注意事项：
+    1. 本地数据库归档过期记录；
+    2. Apple Reminders 自动将已逾期事项标记为已完成；
+    3. 清理调度器中的过期高危预警。
+    """
+    from app.scheduler_daemon import daemon_scheduler
+    res = daemon_scheduler.cleanup_expired_ddls(hours_past=hours_past)
+    return {
+        "status": "success",
+        "message": f"已成功清理/归档 {res.get('total_cleaned', 0)} 条已过期的待办与事项",
+        "detail": res
+    }
 
 # ================= 后台定时守护巡检与高危 DDL 预警接口 =================
 

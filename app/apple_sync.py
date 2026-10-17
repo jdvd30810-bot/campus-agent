@@ -164,3 +164,40 @@ def add_to_apple_calendar(
         logger.error(f"写入 Apple 日历失败: {e}")
         return None
 
+def cleanup_expired_apple_reminders(hours_past: float = 0.0) -> int:
+    """
+    通过 AppleScript 将 macOS 原生「提醒事项」中已过期的待办标记为 completed (完成归档)，
+    让大学生的 iPhone/Mac 锁屏与 App 徽标不再被已逾期的历史旧事项轰炸。
+    返回已清理完成的事项数量。
+    """
+    script = f'''
+    set cleanedCount to 0
+    tell application "Reminders"
+        set checkDate to (current date) - ({hours_past} * 3600)
+        repeat with listName in {{"📚 课程作业与考试", "🏛️ 班级行政与通知", "🎭 社团活动与生活"}}
+            if exists list listName then
+                tell list listName
+                    set expiredList to (every reminder whose completed is false and due date is less than checkDate)
+                    repeat with rem in expiredList
+                        try
+                            set completed of rem to true
+                            set cleanedCount to cleanedCount + 1
+                        end try
+                    end repeat
+                end tell
+            end if
+        end repeat
+    end tell
+    return cleanedCount
+    '''
+    try:
+        res = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=True)
+        count = int(res.stdout.strip()) if res.stdout.strip().isdigit() else 0
+        if count > 0:
+            logger.info(f"🧹 [Apple Reminders 清理] 成功将 {count} 项已过期的待办标记为完成并归档。")
+        return count
+    except Exception as e:
+        logger.warning(f"清理 Apple 过期待办异常 (可能权限受限或无过期待办): {e}")
+        return 0
+
+

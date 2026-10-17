@@ -523,7 +523,12 @@
             </h3>
             <p class="text-xs text-slate-400 mt-0.5">通过唯一 Hash 指纹杜绝重复写入，所有待办均经 Apple 原生 API 回读确认。</p>
           </div>
-          <button onclick="loadSyncedItems()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium">刷新回执</button>
+          <div class="flex items-center gap-2">
+            <button onclick="cleanupExpiredTodosUI()" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 px-2.5 py-1 rounded-lg font-medium transition active:scale-95 flex items-center gap-1" title="一键清理所有过期待办并归档 Apple 提醒事项">
+              <span>🧹</span><span>清理过期</span>
+            </button>
+            <button onclick="loadSyncedItems()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium">刷新回执</button>
+          </div>
         </div>
 
         <div id="receiptsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[360px] overflow-y-auto pr-1">
@@ -1035,22 +1040,37 @@
           return;
         }
         listEl.innerHTML = items.map(item => `
-          <div class="muse-glass-subtle p-3.5 rounded-2xl border border-white/5 text-xs space-y-2 hover:border-white/15 transition">
+          <div class="muse-glass-subtle p-3.5 rounded-2xl border ${item.is_expired ? 'border-white/5 opacity-60' : 'border-white/10'} text-xs space-y-2 hover:border-white/20 transition">
             <div class="flex items-center justify-between gap-2">
-              <span class="font-bold text-white truncate max-w-[180px]">${item.title}</span>
-              <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">✓ 已验真</span>
+              <span class="font-bold text-white truncate max-w-[180px] ${item.is_expired ? 'line-through text-slate-400' : ''}">${item.title}</span>
+              ${item.is_expired ? 
+                '<span class="bg-slate-500/10 text-slate-400 border border-slate-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">⌛ 已截止</span>' : 
+                '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium">✓ 待办有效</span>'}
             </div>
             <div class="flex items-center justify-between text-slate-400 text-[11px]">
-              <span>⏰ ${item.due_datetime || '无截止时间'}</span>
+              <span class="${item.is_expired ? 'text-rose-400/80 font-medium' : ''}">⏰ ${item.due_datetime || '无截止时间'}</span>
               <span>${CATEGORY_TAGS[item.category] || CATEGORY_TAGS['course']}</span>
             </div>
-            <div class="text-[10px] text-slate-500 font-mono truncate pt-1 border-t border-white/5">
-              ID: ${item.apple_item_id || item.item_fingerprint} · ${item.group_name}
+            <div class="text-[10px] text-slate-500 font-mono truncate pt-1 border-t border-white/5 flex items-center justify-between">
+              <span>ID: ${item.apple_item_id || item.item_fingerprint}</span>
+              <span>${item.group_name}</span>
             </div>
           </div>
         `).join('');
       } catch (e) {
         listEl.innerHTML = '<div class="text-center py-4 text-rose-400 text-xs col-span-full">加载回执异常</div>';
+      }
+    }
+
+    async function cleanupExpiredTodosUI() {
+      try {
+        const res = await fetch('/api/v1/todos/cleanup_expired', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || "过期待办与提醒清理成功！");
+        await loadSyncedItems();
+        await loadDaemonStatus();
+      } catch (e) {
+        alert("清理异常: " + e.message);
       }
     }
 

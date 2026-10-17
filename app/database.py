@@ -61,9 +61,15 @@ def init_db():
                 category TEXT DEFAULT 'course',
                 apple_item_id TEXT,
                 verified INTEGER DEFAULT 1,
+                status TEXT DEFAULT 'active',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        try:
+            cursor.execute("ALTER TABLE synced_items ADD COLUMN status TEXT DEFAULT 'active'")
+        except Exception:
+            pass
+
         
         # 预先插入配置中的合法令牌
         for token in settings.VALID_TOKENS:
@@ -174,19 +180,71 @@ def record_synced_item(
     except Exception as e:
         logger.warning(f"记录已同步项失败: {e}")
 
-def get_recent_synced_items(limit: int = 20) -> list[dict]:
-    """获取最近成功写入且已验真的日程/待办列表"""
+def get_recent_synced_items(limit: int = 20, include_expired: bool = False) -> list[dict]:
+    """获取最近成功写入且已验真的日程/待办列表，自动计算是否已逾期并支持过滤已归档项"""
+    now = datetime.now()
     try:
         with get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT id, group_name, item_fingerprint, title, due_datetime, category, apple_item_id, verified, created_at
+            query = """
+                SELECT id, group_name, item_fingerprint, title, due_datetime, category, apple_item_id, verified, status, created_at
                 FROM synced_items
-                ORDER BY created_at DESC
-                LIMIT ?
-            """, (limit,))
-            return [dict(row) for row in cursor.fetchall()]
+            """
+            if not include_expired:
+                query += " WHERE status = 'active'"
+            query += " ORDER BY created_at DESC LIMIT ?"
+            cursor.execute(query, (limit,))
+            items = []
+            for row in cursor.fetchall():
+                it = dict(row)
+                due_str = it.get("due_datetime", "")
+                is_expired = False
+                if due_str:
+                    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+                        try:
+                            dt = datetime.strptime(due_str.strip(), fmt)
+                            if dt < now:
+                                is_expired = True
+                            break
+                        except Exception:
+                            continue
+                it["is_expired"] = is_expired or (it.get("status") == "expired")
+                items.append(it)
+            return items
     except Exception as e:
         logger.warning(f"获取已同步待办记录失败: {e}")
         return []
+
+def cleanup_expired_synced_items(hours_threshold: float = 0.0) -> int:
+    """
+    在本地 SQLite 数据库中将逾期超过指定小时的待办事项标记为 'expired' (已归档/清理)，
+    避免已过去的陈旧通知在控制台与菜单栏长久滞留。
+    """
+    now = datetime.now()
+    count = 0
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, due_datetime FROM synced_items WHERE status = 'active' AND due_datetime != ''")
+            rows = cursor.fetchall()
+            for r in rows:
+                due_str = r["due_datetime"]
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+                    try:
+                        dt = datetime.strptime(due_str.strip(), fmt)
+                        diff_hours = (now - dt).total_seconds() / 3600.0
+                        if diff_hours > hours_threshold:
+                            cursor.execute("UPDATE synced_items SET status = 'expired' WHERE id = ?", (r["id"],))
+                            count += 1
+                        break
+                    except Exception:
+                        continue
+            conn.commit()
+            if count > 0:
+                logger.info(f"🧹 [本地数据库清理] 成功归档/清理 {count} 条已过期待办记录。")
+            return count
+    except Exception as e:
+        logger.warning(f"清理数据库过期记录异常: {e}")
+        return 0
+
 

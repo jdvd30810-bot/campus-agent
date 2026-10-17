@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-green.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-teal.svg)](https://fastapi.tiangolo.com)
 [![Desktop App](https://img.shields.io/badge/Desktop-macOS%20Native%20App-purple.svg)](bin/CampusAgent.app)
-[![Tests](https://img.shields.io/badge/Unit%20Tests-34%2F34%20PASS%20(100%25)-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Unit%20Tests-38%2F38%20PASS%20(100%25)-brightgreen.svg)](tests/)
 [![License](https://img.shields.io/badge/License-MIT-blueviolet.svg)](LICENSE)
 
 ---
@@ -168,9 +168,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-## 🧪 自动化测试验证 (34/34 PASS)
+## 🧪 自动化测试验证 (38/38 PASS)
 
-项目具备极其严谨的测试驱动质量保障（涵盖物理 0 鼠标位移红线、64 位 CoreFoundation C-ABI 指针防截断、ROI 裁剪、dHash 差异计算、群规则过滤、调度器空闲判定与 **macOS 独立桌面客户端 Bundle 契约**等）。
+项目具备极其严谨的测试驱动质量保障（涵盖物理 0 鼠标位移红线、64 位 CoreFoundation C-ABI 指针防截断、ROI 裁剪、dHash 差异计算、群规则过滤、调度器空闲判定、**macOS 独立桌面客户端 Bundle 契约** 与 **过期 DDL/事项智能自动清理与归档机制** 等）。
 
 执行以下命令即可一键运行全量测试套件：
 ```bash
@@ -179,7 +179,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 实测输出：
 ```text
-Ran 34 tests in 2.948s
+Ran 38 tests in 1.937s
 OK (100% 通过)
 ```
 
@@ -192,16 +192,16 @@ campus-agent/
 ├── app/                             # 核心服务模块
 │   ├── main.py                      # FastAPI 异步网关入口与路由装配
 │   ├── agent.py                     # 智能学伴对话引擎与系统横幅推送
-│   ├── scheduler_daemon.py          # 智能后台守护调度器 (45s 物理空闲避让)
+│   ├── scheduler_daemon.py          # 智能后台守护调度器 (45s 物理空闲避让、过期 DDL 自动巡查清理)
 │   ├── menubar_manager.py           # macOS 状态栏常驻胶囊生命周期管理器
 │   ├── groups_manager.py            # 群画像与黑白名单前置过滤引擎
 │   ├── human_driver.py              # 拟人化视觉感知与 macOS 物理外设空闲时间探测
 │   ├── extractor.py                 # 消息结构化提取与物理基准时间锚定推导
-│   ├── apple_sync.py                # Apple Reminders / Calendar 原生官方写入
-│   ├── database.py                  # 本地 SQLite 持久化层
+│   ├── apple_sync.py                # Apple Reminders / Calendar 原生官方写入与过期事项自动归档
+│   ├── database.py                  # 本地 SQLite 持久化层 (待办状态流转与历史清洗)
 │   ├── schemas.py                   # Pydantic 数据模式定义
 │   ├── config.py                    # 强类型配置管理
-│   ├── dashboard.html               # 控制台看板前端
+│   ├── dashboard.html               # 控制台看板前端 (含新手使用说明书与一键清理)
 │   └── naiwa_widget.html            # 动效桌宠视窗前端
 ├── bin/                             # 原生可执行程序包
 │   ├── CampusAgent.app/             # 🖥️ 原生 macOS 独立桌面视窗应用 (含 AppIcon.icns 与 Info.plist)
@@ -212,7 +212,8 @@ campus-agent/
 │   │   └── campus_agent_app.m       # 纯手写 Objective-C Cocoa + WebKit 原生桌面客户端源码
 │   └── menubar/
 │       └── naiwa_menubar.m          # 纯手写 Objective-C Cocoa 状态栏常驻胶囊源码
-├── tests/                           # 完整自动化质量保障与验收测试套件 (34/34 PASS)
+├── tests/                           # 完整自动化质量保障与验收测试套件 (38/38 PASS)
+│   ├── test_iteration_5_expired_cleanup.py   # 过期 DDL 与事项智能自动清理与归档测试
 │   ├── test_iteration_4_desktop_app.py       # 原生桌面客户端 Bundle 结构与架构契约测试
 │   ├── test_redlines_and_compliance.py       # 零鼠标位移、窗口属性与内存防截断红线测试
 │   ├── test_iteration_1_screen_ocr.py        # ROI 动态裁剪与 64-bit dHash 视觉稳定性测试
